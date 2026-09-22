@@ -76,15 +76,15 @@ with c3:
     st.warning("거미줄이 끊어지면 **원심력 초과 / 반경 부족 / 단면적 부족** 등 실패 원인과 수치 처방전이 출력됩니다.")
 
 # ==============================================================================
-# 3. HTML5 Canvas 물리 엔진 (파단 피드백 진단 엔진 내장)
+# 3. HTML5 Canvas 물리 엔진 (파이썬 f-string 충돌 방지: 일반 문자열 사용)
 # ==============================================================================
-canvas_html = f"""
+raw_html_template = """
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-    body {{
+    body {
         margin: 0;
         padding: 0;
         background: #020617;
@@ -92,21 +92,21 @@ canvas_html = f"""
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         user-select: none;
         overflow: hidden;
-    }}
-    #game-container {{
+    }
+    #game-container {
         position: relative;
         width: 100%;
         max-width: 960px;
         margin: 0 auto;
-    }}
-    canvas {{
+    }
+    canvas {
         display: block;
         background: linear-gradient(to bottom, #050814 0%, #0f172a 60%, #1e1b4b 100%);
         border: 2px solid #334155;
         border-radius: 12px;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    }}
-    #hud {{
+    }
+    #hud {
         position: absolute;
         top: 15px;
         left: 20px;
@@ -116,18 +116,18 @@ canvas_html = f"""
         font-size: 14px;
         font-weight: 600;
         text-shadow: 1px 1px 3px black;
-    }}
-    .hud-box {{
+    }
+    .hud-box {
         background: rgba(15, 23, 42, 0.85);
         padding: 8px 12px;
         border-radius: 6px;
         border: 1px solid #475569;
-    }}
-    #state-badge {{
+    }
+    #state-badge {
         color: #38bdf8;
         font-weight: 700;
-    }}
-    #game-over {{
+    }
+    #game-over {
         display: none;
         position: absolute;
         top: 50%; left: 50%;
@@ -139,8 +139,8 @@ canvas_html = f"""
         width: 82%;
         max-width: 620px;
         box-shadow: 0 20px 30px -5px rgba(239, 68, 68, 0.4);
-    }}
-    .diag-card {{
+    }
+    .diag-card {
         background: rgba(30, 41, 59, 0.8);
         border: 1px solid #475569;
         border-radius: 8px;
@@ -149,8 +149,8 @@ canvas_html = f"""
         text-align: left;
         font-size: 13px;
         line-height: 1.6;
-    }}
-    .diag-title {{
+    }
+    .diag-title {
         color: #fca5a5;
         font-weight: 700;
         font-size: 14px;
@@ -158,8 +158,8 @@ canvas_html = f"""
         display: flex;
         align-items: center;
         gap: 6px;
-    }}
-    button.retry-btn {{
+    }
+    button.retry-btn {
         margin-top: 14px;
         background: #ef4444;
         color: white;
@@ -170,10 +170,10 @@ canvas_html = f"""
         border-radius: 6px;
         cursor: pointer;
         width: 100%;
-    }}
-    button.retry-btn:hover {{
+    }
+    button.retry-btn:hover {
         background: #dc2626;
-    }}
+    }
 </style>
 </head>
 <body>
@@ -185,7 +185,7 @@ canvas_html = f"""
         <div class="hud-box">거리: <span id="hud-dist" style="color:#38bdf8;">0 m</span></div>
         <div class="hud-box">속도: <span id="hud-speed" style="color:#4ade80;">0 km/h</span></div>
         <div class="hud-box">상태: <span id="state-badge">비행 중</span></div>
-        <div class="hud-box">장력: <span id="hud-tension" style="color:#fbbf24;">0 N</span> / {f_break_n:,.0f} N</div>
+        <div class="hud-box">장력: <span id="hud-tension" style="color:#fbbf24;">0 N</span> / __F_BREAK_FORMATTED__ N</div>
     </div>
 
     <!-- 정밀 진단 팝업 창 -->
@@ -206,15 +206,13 @@ canvas_html = f"""
 </div>
 
 <script>
-// =============================================================================
-// 파이썬 공학 상수 주입
-// =============================================================================
-const F_BREAK = {f_break_n};         // 파단 장력 한도 (N)
-const MASS = {mass};                 // 질량 (kg)
+// 파이썬 공학 변수 주입
+const F_BREAK = __F_BREAK__;
+const MASS = __MASS__;
 const G = 9.81;
 const PIXELS_PER_METER = 20;
-const NOZZLE_DIAM = {nozzle_diam};
-const CROSSLINK = {crosslink};
+const NOZZLE_DIAM = __NOZZLE_DIAM__;
+const CROSSLINK = __CROSSLINK__;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -228,98 +226,91 @@ const deathDesc = document.getElementById("death-desc");
 const diagDetails = document.getElementById("diag-details");
 const finalDist = document.getElementById("final-dist");
 
-// =============================================================================
-// 게임 상태 변수
-// =============================================================================
 let isAlive = true;
 let isAttached = false;
 let isWallClinging = false;
 let clingSide = 1;
-let anchor = {{ x: 0, y: 0 }};
+let anchor = { x: 0, y: 0 };
 let ropeLength = 0;
 let score = 0;
 let cameraX = 0;
 
-const player = {{
+const player = {
     x: 100,
     y: 220,
     vx: 14,
     vy: 0,
     radius: 12
-}};
+};
 
-// 건물 숲 생성
 let buildings = [];
 let nextBuildingX = 0;
 
-function initBuildings() {{
+function initBuildings() {
     buildings = [];
     nextBuildingX = 0;
-    while (nextBuildingX < canvas.width * 3) {{
+    while (nextBuildingX < canvas.width * 3) {
         spawnBuilding();
-    }}
-}}
+    }
+}
 
-function spawnBuilding() {{
+function spawnBuilding() {
     const width = 110 + Math.random() * 80;
     const height = 230 + Math.random() * 90;
     const gap = 35 + Math.random() * 35;
-    buildings.push({{
+    buildings.push({
         x: nextBuildingX,
         y: canvas.height - height,
         w: width,
         h: height,
         color: '#1e293b',
         windowColor: Math.random() > 0.4 ? '#fde047' : '#0f172a'
-    }});
+    });
     nextBuildingX += width + gap;
-}}
+}
 
-// =============================================================================
-// 조작 로직
-// =============================================================================
-function handleActionDown() {{
+function handleActionDown() {
     if (!isAlive) return;
 
-    if (isWallClinging) {{
+    if (isWallClinging) {
         isWallClinging = false;
         player.vx = (clingSide === 1 ? -1 : 1) * -17;
         player.vy = -18;
         isAttached = false;
         return;
-    }}
+    }
 
     tryAttachWeb();
-}}
+}
 
-function handleActionUp() {{
-    if (isAttached) {{
+function handleActionUp() {
+    if (isAttached) {
         isAttached = false;
-    }}
-}}
+    }
+}
 
-window.addEventListener("keydown", (e) => {{
-    if (e.code === "Space" && !e.repeat) {{
+window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && !e.repeat) {
         handleActionDown();
         e.preventDefault();
-    }}
-}});
-window.addEventListener("keyup", (e) => {{
-    if (e.code === "Space") {{
+    }
+});
+window.addEventListener("keyup", (e) => {
+    if (e.code === "Space") {
         handleActionUp();
         e.preventDefault();
-    }}
-}});
+    }
+});
 canvas.addEventListener("mousedown", handleActionDown);
 window.addEventListener("mouseup", handleActionUp);
 
-function tryAttachWeb() {{
+function tryAttachWeb() {
     if (isAttached || isWallClinging) return;
     
     let bestAnchor = null;
     let minDistance = 9999;
     
-    for (const b of buildings) {{
+    for (const b of buildings) {
         const rooftopX = b.x + b.w * 0.4;
         const rooftopY = b.y;
         
@@ -327,72 +318,62 @@ function tryAttachWeb() {{
         const dy = (rooftopY - player.y) / PIXELS_PER_METER;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        if (dx > 3 && dist < 50 && dist < minDistance) {{
+        if (dx > 3 && dist < 50 && dist < minDistance) {
             minDistance = dist;
-            bestAnchor = {{ x: rooftopX, y: rooftopY }};
-        }}
-    }}
+            bestAnchor = { x: rooftopX, y: rooftopY };
+        }
+    }
     
-    if (bestAnchor) {{
+    if (bestAnchor) {
         anchor = bestAnchor;
         const dx = (player.x - anchor.x) / PIXELS_PER_METER;
         const dy = (player.y - anchor.y) / PIXELS_PER_METER;
         ropeLength = Math.sqrt(dx*dx + dy*dy);
         isAttached = true;
-    }}
-}}
+    }
+}
 
-// =============================================================================
-// 파단 정밀 피드백 생성 엔진 (Diagnostic Feedback Engine)
-// =============================================================================
-function analyzeWebFracture(tensionN, speedKmh, radiusM, centripetalAcc, gravityComponent) {{
+// 파단 정밀 피드백 생성 엔진
+function analyzeWebFracture(tensionN, speedKmh, radiusM, centripetalAcc, gravityComponent) {
     const excess = tensionN - F_BREAK;
     const excessPct = Math.round((excess / F_BREAK) * 100);
     
-    // 최소 필요 노즐 구경 역산: F_break = sigma * pi*(d/2)^2 => d = 2 * sqrt(T / (pi * sigma))
     const currentSigma = 500.0 + (CROSSLINK * 14.0); // MPa
     const reqNozzleDiam = (2.0 * Math.sqrt(tensionN / (Math.PI * currentSigma))).toFixed(2);
     
-    // 원인 유형 분류
     let primaryCause = "";
     let actionGuide = "";
 
-    if (centripetalAcc > 40) {{
-        primaryCause = `🌪️ <b>구심 가속도 폭증 (${(centripetalAcc/G).toFixed(1)} G)</b>: 스윙 속도(${speedKmh} km/h)가 너무 빨라 원심력이 거미줄 지탱 한계를 압도했습니다.`;
-        actionGuide = `👉 <b>플레이 처방</b>: 최저점에 도달하기 직전 스페이스바를 놓아 탄도 비행으로 넘어가거나, 좌측 사이드바에서 <b>노즐 구경을 ${reqNozzleDiam} mm 이상</b>으로 키우십시오.`;
-    }} else if (radiusM < 12) {{
-        primaryCause = `📐 <b>초단거리 곡률 반경 (${radiusM.toFixed(1)} m)</b>: 앵커와 너무 가까운 거리에서 급격하게 회전하여 회전 반경($r$) 감소로 인한 장력 집중이 발생했습니다.`;
-        actionGuide = `👉 <b>플레이 처방</b>: 건물 옥상과 거리를 두고 먼 지점에 사출하여 완만한 스윙 호(Arc)를 그리거나, <b>가교 밀도</b>를 높여 기본 인장강도를 보강하십시오.`;
-    }} else {{
-        primaryCause = `⚖️ <b>동적 하중 한계 초과</b>: 고공 낙하 중력 성분과 운동 에너지가 복합되어 거미줄의 정적 안전계수를 상쇄했습니다.`;
-        actionGuide = `👉 <b>공학 튜닝 처방</b>: 현재 배합(${NOZZLE_DIAM}mm, ${CROSSLINK}%)으로는 ${tensionN.toFixed(0)} N의 충격을 감당할 수 없습니다. <b>노즐을 최소 ${reqNozzleDiam} mm</b>로 개조하십시오.`;
-    }}
+    if (centripetalAcc > 40) {
+        primaryCause = "🌪️ <b>구심 가속도 폭증 (" + (centripetalAcc/G).toFixed(1) + " G)</b>: 스윙 속도(" + speedKmh + " km/h)가 너무 빨라 원심력이 거미줄 지탱 한계를 압도했습니다.";
+        actionGuide = "👉 <b>플레이 처방</b>: 최저점에 도달하기 직전 스페이스바를 놓아 탄도 비행으로 넘어가거나, 좌측 사이드바에서 <b>노즐 구경을 " + reqNozzleDiam + " mm 이상</b>으로 키우십시오.";
+    } else if (radiusM < 12) {
+        primaryCause = "📐 <b>초단거리 곡률 반경 (" + radiusM.toFixed(1) + " m)</b>: 앵커와 너무 가까운 거리에서 급격하게 회전하여 회전 반경(r) 감소로 인한 장력 집중이 발생했습니다.";
+        actionGuide = "👉 <b>플레이 처방</b>: 건물 옥상과 거리를 두고 먼 지점에 사출하여 완만한 스윙 호(Arc)를 그리거나, <b>가교 밀도</b>를 높여 기본 인장강도를 보강하십시오.";
+    } else {
+        primaryCause = "⚖️ <b>동적 하중 한계 초과</b>: 고공 낙하 중력 성분과 운동 에너지가 복합되어 거미줄의 정적 안전계수를 상쇄했습니다.";
+        actionGuide = "👉 <b>공학 튜닝 처방</b>: 현재 배합(" + NOZZLE_DIAM + "mm, " + CROSSLINK + "%)으로는 " + tensionN.toFixed(0) + " N의 충격을 감당할 수 없습니다. <b>노즐을 최소 " + reqNozzleDiam + " mm</b>로 개조하십시오.";
+    }
 
-    return `
-        • <b>순간 측정 장력</b>: <span style="color:#ef4444; font-weight:bold;">${Math.round(tensionN).toLocaleString()} N</span> (허용 한도 대비 <b>+${excessPct}%</b> 초과)<br>
-        • <b>주요 역학 원인</b>: ${primaryCause}<br>
-        • <b>공학적 솔루션</b>: ${actionGuide}
-    `;
-}}
+    return "• <b>순간 측정 장력</b>: <span style='color:#ef4444; font-weight:bold;'>" + Math.round(tensionN).toLocaleString() + " N</span> (허용 한도 대비 <b>+" + excessPct + "%</b> 초과)<br>" +
+           "• <b>주요 역학 원인</b>: " + primaryCause + "<br>" +
+           "• <b>공학적 솔루션</b>: " + actionGuide;
+}
 
-// =============================================================================
-// 물리 업데이트 루프
-// =============================================================================
-function updatePhysics(dt) {{
+function updatePhysics(dt) {
     if (!isAlive) return;
 
     let tensionN = 0;
     const groundLevel = canvas.height - player.radius - 2;
 
-    // [사망 판정 1] 지면 충돌
-    if (player.y >= groundLevel) {{
+    // 지면 충돌 사망 판정
+    if (player.y >= groundLevel) {
         player.y = groundLevel;
         triggerGroundGameOver();
         return;
-    }}
+    }
 
-    // A. 벽 달라붙기
-    if (isWallClinging) {{
+    if (isWallClinging) {
         player.vx = 0;
         player.vy = 2.2;
         player.y += player.vy * dt * PIXELS_PER_METER;
@@ -400,16 +381,14 @@ function updatePhysics(dt) {{
         stateBadge.innerText = "🧗 벽 달라붙음 (슈퍼 점프 대기)";
         stateBadge.style.color = "#f97316";
 
-        if (player.y >= groundLevel) {{
+        if (player.y >= groundLevel) {
             triggerGroundGameOver();
             return;
-        }}
-    }}
-    // B. 비행 & 진자 스윙
-    else {{
+        }
+    } else {
         player.vy += G * dt;
 
-        if (isAttached) {{
+        if (isAttached) {
             stateBadge.innerText = "🕸️ 진자 스윙 중";
             stateBadge.style.color = "#38bdf8";
 
@@ -417,38 +396,36 @@ function updatePhysics(dt) {{
             const dy = (player.y - anchor.y) / PIXELS_PER_METER;
             const currentDist = Math.sqrt(dx*dx + dy*dy);
             
-            if (currentDist >= ropeLength) {{
+            if (currentDist >= ropeLength) {
                 const nx = dx / currentDist;
                 const ny = dy / currentDist;
                 const vr = player.vx * nx + player.vy * ny;
                 
-                if (vr > 0) {{
+                if (vr > 0) {
                     player.vx -= vr * nx;
                     player.vy -= vr * ny;
-                }}
+                }
                 
                 player.x = anchor.x + nx * ropeLength * PIXELS_PER_METER;
                 player.y = anchor.y + ny * ropeLength * PIXELS_PER_METER;
                 
-                // 장력 계산 공식: T = m * (g*cosθ + v^2/r)
                 const speedSq = player.vx * player.vx + player.vy * player.vy;
                 const cosTheta = -ny;
                 const centripetalAcc = speedSq / ropeLength;
                 const gravityComponent = G * cosTheta;
                 tensionN = MASS * Math.max(0, (gravityComponent + centripetalAcc));
                 
-                // [사망 판정 2] 거미줄 파단 발생 시 정밀 피드백 출력
-                if (tensionN > F_BREAK) {{
+                if (tensionN > F_BREAK) {
                     const speedKmh = Math.round(Math.sqrt(speedSq) * 3.6);
                     const feedbackHTML = analyzeWebFracture(tensionN, speedKmh, ropeLength, centripetalAcc, gravityComponent);
                     triggerFractureGameOver(feedbackHTML);
                     return;
-                }}
-            }}
-        }} else {{
+                }
+            }
+        } else {
             stateBadge.innerText = "🦅 자유 탄도 비행";
             stateBadge.style.color = "#4ade80";
-        }}
+        }
 
         player.vx *= 0.9995;
         player.vy *= 0.9995;
@@ -456,54 +433,45 @@ function updatePhysics(dt) {{
         player.x += player.vx * dt * PIXELS_PER_METER;
         player.y += player.vy * dt * PIXELS_PER_METER;
 
-        // 건물 벽 충돌 검사
-        for (const b of buildings) {{
+        for (const b of buildings) {
             if (player.x + player.radius >= b.x && player.x - player.radius <= b.x + 10 &&
-                player.y > b.y && player.y < canvas.height - 20) {{
+                player.y > b.y && player.y < canvas.height - 20) {
                 isWallClinging = true;
                 clingSide = 1;
                 player.x = b.x - player.radius;
                 isAttached = false;
                 break;
-            }}
-            // 옥상 바운드 러닝
+            }
             if (player.x >= b.x && player.x <= b.x + b.w &&
-                Math.abs(player.y - b.y) < 14 && player.vy > 0) {{
+                Math.abs(player.y - b.y) < 14 && player.vy > 0) {
                 player.y = b.y - player.radius;
                 player.vy = -11;
                 player.vx = Math.max(player.vx, 15);
-            }}
-        }}
-    }}
+            }
+        }
+    }
 
-    // 건물 생성 관리
-    if (player.x + canvas.width > nextBuildingX) {{
+    if (player.x + canvas.width > nextBuildingX) {
         spawnBuilding();
-    }}
+    }
     buildings = buildings.filter(b => b.x + b.w > player.x - 400);
 
-    // 카메라 추적
     cameraX = player.x - 220;
 
-    // HUD 업데이트
     score = Math.max(0, Math.floor((player.x - 100) / PIXELS_PER_METER));
     const currentSpeedKmh = Math.round(Math.sqrt(player.vx*player.vx + player.vy*player.vy) * 3.6);
     hudDist.innerText = score + " m";
     hudSpeed.innerText = currentSpeedKmh + " km/h";
     
-    // 장력 경고 색상 표시 (85% 이상 시 붉은색 경고)
     const tensionRatio = tensionN / F_BREAK;
-    if (tensionRatio > 0.85) {{
-        hudTension.innerHTML = `<span style="color:#ef4444; animation: blink 0.5s infinite;">${Math.round(tensionN).toLocaleString()} N (과부하!)</span>`;
-    }} else {{
+    if (tensionRatio > 0.85) {
+        hudTension.innerHTML = "<span style='color:#ef4444;'>" + Math.round(tensionN).toLocaleString() + " N (과부하!)</span>";
+    } else {
         hudTension.innerText = Math.round(tensionN).toLocaleString() + " N";
-    }}
-}}
+    }
+}
 
-// =============================================================================
-// 게임오버 트리거 함수들
-// =============================================================================
-function triggerFractureGameOver(feedbackHTML) {{
+function triggerFractureGameOver(feedbackHTML) {
     isAlive = false;
     isAttached = false;
     isWallClinging = false;
@@ -512,23 +480,21 @@ function triggerFractureGameOver(feedbackHTML) {{
     diagDetails.innerHTML = feedbackHTML;
     finalDist.innerText = score;
     gameOverPanel.style.display = "block";
-}}
+}
 
-function triggerGroundGameOver() {{
+function triggerGroundGameOver() {
     isAlive = false;
     isAttached = false;
     isWallClinging = false;
     deathReason.innerText = "💀 지면 충돌 추락사 (Ground Impact)";
     deathDesc.innerText = "고공 낙하 충격량을 분산하지 못하고 바닥에 정면 충돌했습니다.";
-    diagDetails.innerHTML = `
-        • <b>충돌 상황</b>: 스윙 앵커가 끊기거나 벽에서 탈출하지 못해 지면에 격돌함.<br>
-        • <b>플레이 처방</b>: 바닥에 닿기 전 <b>[스페이스바]</b>로 다음 건물 옥상에 재사출하거나, 벽에 달라붙었을 때 지체 없이 슈퍼 점프를 입력하십시오!
-    `;
+    diagDetails.innerHTML = "• <b>충돌 상황</b>: 스윙 앵커가 끊기거나 벽에서 탈출하지 못해 지면에 격돌함.<br>" +
+                           "• <b>플레이 처방</b>: 바닥에 닿기 전 <b>[스페이스바]</b>로 다음 건물 옥상에 재사출하거나, 벽에 달라붙었을 때 지체 없이 슈퍼 점프를 입력하십시오!";
     finalDist.innerText = score;
     gameOverPanel.style.display = "block";
-}}
+}
 
-function resetGame() {{
+function resetGame() {
     player.x = 100;
     player.y = 220;
     player.vx = 14;
@@ -538,41 +504,35 @@ function resetGame() {{
     isWallClinging = false;
     gameOverPanel.style.display = "none";
     initBuildings();
-}}
+}
 
-// =============================================================================
-// 그래픽 렌더링
-// =============================================================================
-function draw() {{
+function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.translate(-cameraX, 0);
 
-    // 1) 고층 빌딩
-    for (const b of buildings) {{
+    for (const b of buildings) {
         ctx.fillStyle = b.color;
         ctx.fillRect(b.x, b.y, b.w, b.h);
         
         ctx.fillStyle = b.windowColor;
-        for (let wy = b.y + 16; wy < canvas.height - 20; wy += 32) {{
-            for (let wx = b.x + 12; wx < b.x + b.w - 12; wx += 22) {{
-                if ((wx + wy) % 5 === 0) {{
+        for (let wy = b.y + 16; wy < canvas.height - 20; wy += 32) {
+            for (let wx = b.x + 12; wx < b.x + b.w - 12; wx += 22) {
+                if ((wx + wy) % 5 === 0) {
                     ctx.fillRect(wx, wy, 8, 14);
-                }}
-            }}
-        }}
+                }
+            }
+        }
 
         ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 2;
         ctx.strokeRect(b.x, b.y, b.w, 4);
-    }}
+    }
 
-    // 2) 바닥 위험선
     ctx.fillStyle = "#ef4444";
     ctx.fillRect(player.x - 400, canvas.height - 8, canvas.width + 800, 8);
 
-    // 3) 거미줄 (과부하 시 붉은색 발광 이펙트)
-    if (isAttached) {{
+    if (isAttached) {
         ctx.beginPath();
         ctx.moveTo(anchor.x, anchor.y);
         ctx.lineTo(player.x, player.y);
@@ -587,18 +547,17 @@ function draw() {{
         ctx.arc(anchor.x, anchor.y, 6, 0, Math.PI * 2);
         ctx.fillStyle = "#ef4444";
         ctx.fill();
-    }}
+    }
 
-    // 4) 스파이더맨 캐릭터
     ctx.save();
     ctx.translate(player.x, player.y);
     
-    if (isWallClinging) {{
+    if (isWallClinging) {
         ctx.rotate(clingSide === 1 ? -Math.PI / 2 : Math.PI / 2);
-    }} else {{
+    } else {
         const angle = Math.atan2(player.vy, player.vx);
         ctx.rotate(angle);
-    }}
+    }
 
     ctx.beginPath();
     ctx.ellipse(0, 0, 15, 9, 0, 0, Math.PI * 2);
@@ -617,11 +576,10 @@ function draw() {{
 
     ctx.restore();
     ctx.restore();
-}}
+}
 
-// 애니메이션 루프
 let lastTime = performance.now();
-function gameLoop(now) {{
+function gameLoop(now) {
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
     
@@ -629,7 +587,7 @@ function gameLoop(now) {{
     draw();
     
     requestAnimationFrame(gameLoop);
-}}
+}
 
 initBuildings();
 requestAnimationFrame(gameLoop);
@@ -638,17 +596,24 @@ requestAnimationFrame(gameLoop);
 </html>
 """
 
-components.html(canvas_html, height=590, scrolling=False)
+# 파이썬 수치를 안전하게 치환 (String Replace 방식)
+final_html = raw_html_template \
+    .replace("__F_BREAK__", str(f_break_n)) \
+    .replace("__F_BREAK_FORMATTED__", f"{f_break_n:,.0f}") \
+    .replace("__MASS__", str(mass)) \
+    .replace("__NOZZLE_DIAM__", str(nozzle_diam)) \
+    .replace("__CROSSLINK__", str(crosslink))
+
+components.html(final_html, height=590, scrolling=False)
 
 # ==============================================================================
-# 4. 세특 탐구 보고서 연계 정리 (진단 알고리즘 및 역학 최적화)
+# 4. 세특 탐구 보고서 연계 정리
 # ==============================================================================
 with st.expander("📝 [생기부 세특 작성 팁] 거미줄 파단 진단 알고리즘과 재료 최적화 수식"):
     st.markdown(r"""
     * **파단 원인 분해 알고리즘(Failure Analysis Algorithm)**:
-      * 스윙 장력 수식 $T = m\left(g\cos\theta + \frac{v^2}{r}\right)$에서 파단 순간의 각 항($g\cos\theta$ 대 $\frac{v^2}{r}$)의 기여도를 분해하여, 과도한 속도(구심 가속도 폭증)인지 회전 반경 부족(곡률 과소)인지 역학적으로 판별하도록 프로그래밍함.
+      * 스윙 장력 수식 $T = m\left(g\cos\theta + \frac{v^2}{r}\right)$에서 파단 순간의 각 항의 기여도를 분해하여, 구심 가속도 폭증인지 곡률 반경 부족인지 역학적으로 판별하도록 프로그래밍함.
     * **임계 노즐 구경 역산(Inverse Design of Nozzle Diameter)**:
       * 파단 장력 $T_{\text{fail}}$ 발생 시, 재료가 이를 견디기 위해 요구되는 최소 노즐 직경 $d_{\text{req}}$를 극한 인장강도($\sigma_{\text{uts}}$)로부터 역산하는 수식을 피드백 패널에 실시간 렌더링함:
       $$d_{\text{req}} = 2 \cdot \sqrt{\frac{T_{\text{fail}}}{\pi \cdot \sigma_{\text{uts}}}}$$
-    * 이를 통해 사용자가 직관적인 수치 피드백을 바탕으로 고분자 배합 파라미터를 최적화하는 **'공학적 설계-검증 피드백 루프'**를 완성함.
     """)
