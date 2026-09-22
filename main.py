@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 # 1. Streamlit 페이지 설정
 # ==============================================================================
 st.set_page_config(
-    page_title="스파이더맨 웹슈터 공학 랩 & 파단 진단 시스템",
+    page_title="스파이더맨 웹슈터 공학 랩 & 더블 탭 묘기 액션",
     page_icon="🕸️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -19,8 +19,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🕸️ 피터 파커의 고분자 웹슈터 역학 랩 & 파단 진단 시스템")
-st.caption("진자 스윙 역학과 고분자 파단 역학을 결합한 실시간 피드백 시뮬레이터")
+st.title("🕸️ 피터 파커의 고분자 웹슈터 역학 랩 & 아크로바틱 묘기 액션")
+st.caption("진자 스윙 역학, 고분자 파단 피드백, 그리고 공중 360° 회전 묘기(Acrobatic Trick) 결합")
 
 # ==============================================================================
 # 2. 사이드바: 고분자 물성 및 피터 파커 신체 조건
@@ -30,13 +30,13 @@ with st.sidebar:
     
     crosslink = st.slider(
         "거미줄 가교 밀도 (Crosslink, %)",
-        min_value=20, max_value=100, value=70, step=5,
+        min_value=20, max_value=100, value=75, step=5,
         help="단백질 사슬 결합 강도. 인장 강도와 영률을 좌우합니다."
     )
     
     nozzle_diam = st.slider(
         "웹슈터 사출 구경 (Nozzle Gauge, mm)",
-        min_value=0.6, max_value=3.0, value=1.2, step=0.1,
+        min_value=0.6, max_value=3.0, value=1.3, step=0.1,
         help="거미줄의 굵기. 단면적이 커질수록 견디는 절대 하중이 급증합니다."
     )
     
@@ -45,16 +45,11 @@ with st.sidebar:
         min_value=50, max_value=90, value=70, step=1
     )
 
-    # --------------------------------------------------------------------------
     # 재료역학 계산
-    # --------------------------------------------------------------------------
     radius_mm = nozzle_diam / 2.0
     area_mm2 = 3.141592 * (radius_mm ** 2)
-    # 인장강도 (MPa)
     tensile_strength_mpa = 500.0 + (crosslink * 14.0)
-    # 최대 파단 하중 F_break (N)
     f_break_n = tensile_strength_mpa * area_mm2
-    # 영률 (GPa)
     youngs_modulus_gpa = 4.0 + (crosslink * 0.18)
 
     st.divider()
@@ -66,17 +61,17 @@ with st.sidebar:
 # 조작 가이드 안내
 c1, c2, c3 = st.columns(3)
 with c1:
-    st.markdown("🎯 **1. 텐션 관리 스윙**")
-    st.info("**[스페이스바]** or **[마우스 꾹]**: 거미줄 사출. 속도가 빠를 땐 줄을 일찍 놓아야 과부하를 피합니다.")
+    st.markdown("🎯 **1. 스페이스바 거미줄 사출**")
+    st.info("**[스페이스바 누름]**: 거미줄이 옥상으로 즉시 사출되어 진자 스윙을 합니다. 떼면 줄을 놓고 날아갑니다.")
 with c2:
-    st.markdown("🧗 **2. 벽 붙기 & 슈퍼 도약**")
-    st.success("건물 옆면에 닿으면 **벽에 흡착**되며, 이때 **클릭/스페이스바**를 누르면 대각선 위로 **슈퍼 점프**합니다.")
+    st.markdown("🤸‍♂️ **2. 더블 스페이스바 묘기 (Trick)**")
+    st.success("**[스페이스바 2번 연속 따닥!]**: 공중에서 360° 공중제비 묘기를 펼치며 추가 가속 추진을 얻습니다!")
 with c3:
-    st.markdown("⚠️ **3. 공학적 파단 진단**")
-    st.warning("거미줄이 끊어지면 **원심력 초과 / 반경 부족 / 단면적 부족** 등 실패 원인과 수치 처방전이 출력됩니다.")
+    st.markdown("🧗 **3. 벽 붙기 & 슈퍼 점프**")
+    st.warning("건물 옆면에 닿으면 벽에 흡착되며, 이때 **[스페이스바]**를 누르면 대각선 위로 **슈퍼 점프**합니다.")
 
 # ==============================================================================
-# 3. HTML5 Canvas 물리 엔진 (파이썬 f-string 충돌 방지: 일반 문자열 사용)
+# 3. HTML5 Canvas 물리 엔진 (더블 탭 묘기 시스템 탑재)
 # ==============================================================================
 raw_html_template = """
 <!DOCTYPE html>
@@ -126,6 +121,26 @@ raw_html_template = """
     #state-badge {
         color: #38bdf8;
         font-weight: 700;
+    }
+    #trick-banner {
+        position: absolute;
+        top: 65px;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: none;
+        background: linear-gradient(90deg, #f59e0b, #ef4444);
+        color: white;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 15px;
+        font-weight: 800;
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+        display: none;
+        animation: pulse 0.3s infinite alternate;
+    }
+    @keyframes pulse {
+        from { transform: translateX(-50%) scale(1); }
+        to { transform: translateX(-50%) scale(1.08); }
     }
     #game-over {
         display: none;
@@ -188,7 +203,10 @@ raw_html_template = """
         <div class="hud-box">장력: <span id="hud-tension" style="color:#fbbf24;">0 N</span> / __F_BREAK_FORMATTED__ N</div>
     </div>
 
-    <!-- 정밀 진단 팝업 창 -->
+    <!-- 묘기 발동 배너 -->
+    <div id="trick-banner">✨ 360° 공중제비 묘기 발동! (+부스트)</div>
+
+    <!-- 파단 및 게임오버 진단 창 -->
     <div id="game-over">
         <h2 id="death-reason" style="color: #ef4444; margin:0 0 8px 0; font-size: 22px;">거미줄 파단!</h2>
         <p id="death-desc" style="color: #cbd5e1; font-size:14px; margin:0;">장력 초과 파단이 발생했습니다.</p>
@@ -206,7 +224,6 @@ raw_html_template = """
 </div>
 
 <script>
-// 파이썬 공학 변수 주입
 const F_BREAK = __F_BREAK__;
 const MASS = __MASS__;
 const G = 9.81;
@@ -220,6 +237,7 @@ const hudDist = document.getElementById("hud-dist");
 const hudSpeed = document.getElementById("hud-speed");
 const hudTension = document.getElementById("hud-tension");
 const stateBadge = document.getElementById("state-badge");
+const trickBanner = document.getElementById("trick-banner");
 const gameOverPanel = document.getElementById("game-over");
 const deathReason = document.getElementById("death-reason");
 const deathDesc = document.getElementById("death-desc");
@@ -234,6 +252,13 @@ let anchor = { x: 0, y: 0 };
 let ropeLength = 0;
 let score = 0;
 let cameraX = 0;
+
+// 더블 탭(더블 스페이스바) 및 묘기(Trick) 상태 변수
+let lastSpacePressTime = 0;
+const DOUBLE_TAP_DELAY = 280; // 280ms 이내 재입력 시 더블탭 인정
+let isDoingTrick = false;
+let trickRotation = 0;        // 360도 회전 각도 누적
+let trickTrail = [];          // 묘기 발동 잔상 궤적
 
 const player = {
     x: 100,
@@ -269,43 +294,77 @@ function spawnBuilding() {
     nextBuildingX += width + gap;
 }
 
-function handleActionDown() {
+// =============================================================================
+// 스페이스바 단발 & 더블 클릭 묘기 제어
+// =============================================================================
+function handleSpacePress() {
     if (!isAlive) return;
 
+    const now = performance.now();
+    const timeSinceLastPress = now - lastSpacePressTime;
+
+    // 1) 벽에 붙어있는 경우 -> 슈퍼 점프 도약
     if (isWallClinging) {
         isWallClinging = false;
         player.vx = (clingSide === 1 ? -1 : 1) * -17;
         player.vy = -18;
         isAttached = false;
+        lastSpacePressTime = now;
         return;
     }
 
+    // 2) [더블 스페이스바 감지] 공중에서 280ms 이내에 다시 누른 경우 -> 묘기 발동!
+    if (timeSinceLastPress < DOUBLE_TAP_DELAY && !isAttached) {
+        triggerAcrobaticTrick();
+        lastSpacePressTime = 0; // 더블탭 소비
+        return;
+    }
+    lastSpacePressTime = now;
+
+    // 3) 단발 스페이스바 -> 거미줄 발사
     tryAttachWeb();
 }
 
-function handleActionUp() {
+function handleSpaceRelease() {
     if (isAttached) {
-        isAttached = false;
+        isAttached = false; // 거미줄 놓고 탄도 비행
     }
+}
+
+// 묘기(Trick) 실행: 360도 공중제비 및 추가 부스트
+function triggerAcrobaticTrick() {
+    isDoingTrick = true;
+    trickRotation = 0;
+    isAttached = false; // 묘기 중에는 거미줄 해제
+    
+    // 묘기 공중 부스트 가속 (전방 추진 + 상공 부양)
+    player.vx += 5.5;
+    player.vy = -11.5;
+    
+    trickBanner.style.display = "block";
+    setTimeout(() => {
+        trickBanner.style.display = "none";
+    }, 800);
 }
 
 window.addEventListener("keydown", (e) => {
     if (e.code === "Space" && !e.repeat) {
-        handleActionDown();
+        handleSpacePress();
         e.preventDefault();
     }
 });
 window.addEventListener("keyup", (e) => {
     if (e.code === "Space") {
-        handleActionUp();
+        handleSpaceRelease();
         e.preventDefault();
     }
 });
-canvas.addEventListener("mousedown", handleActionDown);
-window.addEventListener("mouseup", handleActionUp);
+canvas.addEventListener("mousedown", handleSpacePress);
+window.addEventListener("mouseup", handleSpaceRelease);
 
+// 전방 옥상 자동 조준 사출
 function tryAttachWeb() {
-    if (isAttached || isWallClinging) return;
+    if (isAttached || isWallClinging || isDoingTrick) return;
     
     let bestAnchor = null;
     let minDistance = 9999;
@@ -333,12 +392,12 @@ function tryAttachWeb() {
     }
 }
 
-// 파단 정밀 피드백 생성 엔진
+// 파단 진단 피드백 엔진
 function analyzeWebFracture(tensionN, speedKmh, radiusM, centripetalAcc, gravityComponent) {
     const excess = tensionN - F_BREAK;
     const excessPct = Math.round((excess / F_BREAK) * 100);
     
-    const currentSigma = 500.0 + (CROSSLINK * 14.0); // MPa
+    const currentSigma = 500.0 + (CROSSLINK * 14.0);
     const reqNozzleDiam = (2.0 * Math.sqrt(tensionN / (Math.PI * currentSigma))).toFixed(2);
     
     let primaryCause = "";
@@ -346,12 +405,12 @@ function analyzeWebFracture(tensionN, speedKmh, radiusM, centripetalAcc, gravity
 
     if (centripetalAcc > 40) {
         primaryCause = "🌪️ <b>구심 가속도 폭증 (" + (centripetalAcc/G).toFixed(1) + " G)</b>: 스윙 속도(" + speedKmh + " km/h)가 너무 빨라 원심력이 거미줄 지탱 한계를 압도했습니다.";
-        actionGuide = "👉 <b>플레이 처방</b>: 최저점에 도달하기 직전 스페이스바를 놓아 탄도 비행으로 넘어가거나, 좌측 사이드바에서 <b>노즐 구경을 " + reqNozzleDiam + " mm 이상</b>으로 키우십시오.";
+        actionGuide = "👉 <b>플레이 처방</b>: 최저점에 도달하기 전 스페이스바를 떼서 탄도 비행으로 넘어가거나, 좌측에서 <b>노즐 구경을 " + reqNozzleDiam + " mm 이상</b>으로 키우십시오.";
     } else if (radiusM < 12) {
-        primaryCause = "📐 <b>초단거리 곡률 반경 (" + radiusM.toFixed(1) + " m)</b>: 앵커와 너무 가까운 거리에서 급격하게 회전하여 회전 반경(r) 감소로 인한 장력 집중이 발생했습니다.";
-        actionGuide = "👉 <b>플레이 처방</b>: 건물 옥상과 거리를 두고 먼 지점에 사출하여 완만한 스윙 호(Arc)를 그리거나, <b>가교 밀도</b>를 높여 기본 인장강도를 보강하십시오.";
+        primaryCause = "📐 <b>초단거리 곡률 반경 (" + radiusM.toFixed(1) + " m)</b>: 앵커와 너무 가까운 거리에서 급격히 회전하여 회전 반경(r) 감소로 인한 장력 집중이 발생했습니다.";
+        actionGuide = "👉 <b>플레이 처방</b>: 전방 먼 지점에 거미줄을 걸어 완만한 스윙 호(Arc)를 그리거나, <b>가교 밀도</b>를 높여 기본 인장강도를 보강하십시오.";
     } else {
-        primaryCause = "⚖️ <b>동적 하중 한계 초과</b>: 고공 낙하 중력 성분과 운동 에너지가 복합되어 거미줄의 정적 안전계수를 상쇄했습니다.";
+        primaryCause = "⚖️ <b>동적 하중 한계 초과</b>: 고공 낙하 중력 성분과 운동 에너지가 복합되어 거미줄 안전계수를 상쇄했습니다.";
         actionGuide = "👉 <b>공학 튜닝 처방</b>: 현재 배합(" + NOZZLE_DIAM + "mm, " + CROSSLINK + "%)으로는 " + tensionN.toFixed(0) + " N의 충격을 감당할 수 없습니다. <b>노즐을 최소 " + reqNozzleDiam + " mm</b>로 개조하십시오.";
     }
 
@@ -360,6 +419,7 @@ function analyzeWebFracture(tensionN, speedKmh, radiusM, centripetalAcc, gravity
            "• <b>공학적 솔루션</b>: " + actionGuide;
 }
 
+// 물리 업데이트
 function updatePhysics(dt) {
     if (!isAlive) return;
 
@@ -373,19 +433,43 @@ function updatePhysics(dt) {
         return;
     }
 
+    // 묘기(360도 공중제비) 회전 적분
+    if (isDoingTrick) {
+        trickRotation += dt * 18; // 빠른 회전 속도
+        stateBadge.innerText = "🤸‍♂️ 360° 공중 묘기 중!";
+        stateBadge.style.color = "#f59e0b";
+        
+        // 잔상 이펙트 기록
+        trickTrail.push({ x: player.x, y: player.y, alpha: 0.8 });
+
+        if (trickRotation >= Math.PI * 2) {
+            isDoingTrick = false;
+            trickRotation = 0;
+        }
+    }
+
+    // 잔상 페이드아웃
+    for (let i = trickTrail.length - 1; i >= 0; i--) {
+        trickTrail[i].alpha -= dt * 2.5;
+        if (trickTrail[i].alpha <= 0) trickTrail.splice(i, 1);
+    }
+
+    // A. 벽에 달라붙은 상태
     if (isWallClinging) {
         player.vx = 0;
         player.vy = 2.2;
         player.y += player.vy * dt * PIXELS_PER_METER;
         
-        stateBadge.innerText = "🧗 벽 달라붙음 (슈퍼 점프 대기)";
+        stateBadge.innerText = "🧗 벽 달라붙음 (스페이스바로 도약!)";
         stateBadge.style.color = "#f97316";
 
         if (player.y >= groundLevel) {
             triggerGroundGameOver();
             return;
         }
-    } else {
+    } 
+    // B. 비행 및 스윙 상태
+    else {
         player.vy += G * dt;
 
         if (isAttached) {
@@ -422,7 +506,7 @@ function updatePhysics(dt) {
                     return;
                 }
             }
-        } else {
+        } else if (!isDoingTrick) {
             stateBadge.innerText = "🦅 자유 탄도 비행";
             stateBadge.style.color = "#4ade80";
         }
@@ -433,6 +517,7 @@ function updatePhysics(dt) {
         player.x += player.vx * dt * PIXELS_PER_METER;
         player.y += player.vy * dt * PIXELS_PER_METER;
 
+        // 건물 벽 충돌 검사
         for (const b of buildings) {
             if (player.x + player.radius >= b.x && player.x - player.radius <= b.x + 10 &&
                 player.y > b.y && player.y < canvas.height - 20) {
@@ -440,6 +525,7 @@ function updatePhysics(dt) {
                 clingSide = 1;
                 player.x = b.x - player.radius;
                 isAttached = false;
+                isDoingTrick = false;
                 break;
             }
             if (player.x >= b.x && player.x <= b.x + b.w &&
@@ -475,6 +561,7 @@ function triggerFractureGameOver(feedbackHTML) {
     isAlive = false;
     isAttached = false;
     isWallClinging = false;
+    isDoingTrick = false;
     deathReason.innerText = "💥 거미줄 인장 파단 (Web Line Snapped!)";
     deathDesc.innerText = "스윙 도중 줄에 걸린 순간 장력이 고분자 한계치를 초과하여 끊어졌습니다.";
     diagDetails.innerHTML = feedbackHTML;
@@ -486,10 +573,11 @@ function triggerGroundGameOver() {
     isAlive = false;
     isAttached = false;
     isWallClinging = false;
+    isDoingTrick = false;
     deathReason.innerText = "💀 지면 충돌 추락사 (Ground Impact)";
     deathDesc.innerText = "고공 낙하 충격량을 분산하지 못하고 바닥에 정면 충돌했습니다.";
     diagDetails.innerHTML = "• <b>충돌 상황</b>: 스윙 앵커가 끊기거나 벽에서 탈출하지 못해 지면에 격돌함.<br>" +
-                           "• <b>플레이 처방</b>: 바닥에 닿기 전 <b>[스페이스바]</b>로 다음 건물 옥상에 재사출하거나, 벽에 달라붙었을 때 지체 없이 슈퍼 점프를 입력하십시오!";
+                           "• <b>플레이 처방</b>: 바닥에 닿기 전 <b>[스페이스바]</b>로 다음 건물에 재사출하거나 <b>[더블 스페이스바]</b>로 공중제비를 돌아 고도를 복원하십시오!";
     finalDist.innerText = score;
     gameOverPanel.style.display = "block";
 }
@@ -502,6 +590,9 @@ function resetGame() {
     isAlive = true;
     isAttached = false;
     isWallClinging = false;
+    isDoingTrick = false;
+    trickRotation = 0;
+    trickTrail = [];
     gameOverPanel.style.display = "none";
     initBuildings();
 }
@@ -511,6 +602,7 @@ function draw() {
     ctx.save();
     ctx.translate(-cameraX, 0);
 
+    // 1) 빌딩 렌더링
     for (const b of buildings) {
         ctx.fillStyle = b.color;
         ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -529,9 +621,19 @@ function draw() {
         ctx.strokeRect(b.x, b.y, b.w, 4);
     }
 
+    // 2) 바닥 위험선
     ctx.fillStyle = "#ef4444";
     ctx.fillRect(player.x - 400, canvas.height - 8, canvas.width + 800, 8);
 
+    // 3) 묘기 발동 잔상 궤적
+    for (const trail of trickTrail) {
+        ctx.beginPath();
+        ctx.arc(trail.x, trail.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(245, 158, 11, " + trail.alpha + ")";
+        ctx.fill();
+    }
+
+    // 4) 거미줄
     if (isAttached) {
         ctx.beginPath();
         ctx.moveTo(anchor.x, anchor.y);
@@ -549,26 +651,33 @@ function draw() {
         ctx.fill();
     }
 
+    // 5) 스파이더맨 캐릭터 렌더링
     ctx.save();
     ctx.translate(player.x, player.y);
     
-    if (isWallClinging) {
+    if (isDoingTrick) {
+        // 공중제비 360도 회전
+        ctx.rotate(trickRotation);
+    } else if (isWallClinging) {
         ctx.rotate(clingSide === 1 ? -Math.PI / 2 : Math.PI / 2);
     } else {
         const angle = Math.atan2(player.vy, player.vx);
         ctx.rotate(angle);
     }
 
+    // 몸체 (레드 슈트)
     ctx.beginPath();
     ctx.ellipse(0, 0, 15, 9, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "#e11d48";
+    ctx.fillStyle = isDoingTrick ? "#f59e0b" : "#e11d48";
     ctx.fill();
 
+    // 슈트 블루 패턴
     ctx.beginPath();
     ctx.ellipse(-4, 0, 6, 7, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#2563eb";
     ctx.fill();
 
+    // 눈 마스크
     ctx.beginPath();
     ctx.ellipse(6, -3, 5, 2.5, Math.PI / 5, 0, Math.PI * 2);
     ctx.fillStyle = "#ffffff";
@@ -596,7 +705,7 @@ requestAnimationFrame(gameLoop);
 </html>
 """
 
-# 파이썬 수치를 안전하게 치환 (String Replace 방식)
+# 파이썬 수치 치환
 final_html = raw_html_template \
     .replace("__F_BREAK__", str(f_break_n)) \
     .replace("__F_BREAK_FORMATTED__", f"{f_break_n:,.0f}") \
@@ -609,8 +718,10 @@ components.html(final_html, height=590, scrolling=False)
 # ==============================================================================
 # 4. 세특 탐구 보고서 연계 정리
 # ==============================================================================
-with st.expander("📝 [생기부 세특 작성 팁] 거미줄 파단 진단 알고리즘과 재료 최적화 수식"):
+with st.expander("📝 [생기부 세특 작성 팁] 거미줄 파단 진단 알고리즘과 각운동량 보존 법칙"):
     st.markdown(r"""
+    * **공중 묘기(Acrobatic Trick)와 각운동량 보존 법칙(Conservation of Angular Momentum)**:
+      * 스파이더맨이 공중제비를 도는 동작은 신체 중심축으로 팔다리를 웅크려 관성 모멘트($I = \sum m_i r_i^2$)를 감소시키고, 이에 따라 각속도($\omega = \frac{L}{I}$)를 급증시키는 회전 역학 원리를 모사함.
     * **파단 원인 분해 알고리즘(Failure Analysis Algorithm)**:
       * 스윙 장력 수식 $T = m\left(g\cos\theta + \frac{v^2}{r}\right)$에서 파단 순간의 각 항의 기여도를 분해하여, 구심 가속도 폭증인지 곡률 반경 부족인지 역학적으로 판별하도록 프로그래밍함.
     * **임계 노즐 구경 역산(Inverse Design of Nozzle Diameter)**:
