@@ -19,11 +19,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🕸️ 피터 파커의 스파이더 액션 & 생체모방 벽타기 시뮬레이터")
-st.caption("게코 도마뱀·거미 족모의 반데르발스 정전기 흡착 원리와 진자 스윙 공학 결합")
+st.title("🕸️ 피터 파커의 고공 스파이더 액션 & 역학 시뮬레이터")
+st.caption("건물 벽 흡착 및 반발 도약, 진자 스윙, 고공 추락 충격량 역학 결합")
 
 # ==============================================================================
-# 2. 사이드바: 고분자 물성 및 피터 파커 신체 조건
+# 2. 사이드바: 고분자 물성 및 신체 조건
 # ==============================================================================
 with st.sidebar:
     st.header("🧪 피터 파커 바이오 스펙 (Lab)")
@@ -31,7 +31,7 @@ with st.sidebar:
     crosslink = st.slider(
         "거미줄 가교 밀도 (Crosslink, %)",
         min_value=30, max_value=100, value=85, step=5,
-        help="단백질 사슬 결합도. 피터 파커 공식 사양은 고가교 초강도 섬유입니다."
+        help="단백질 사슬 결합도. 높을수록 장력을 잘 버팁니다."
     )
     
     nozzle_diam = st.slider(
@@ -49,33 +49,29 @@ with st.sidebar:
     # --------------------------------------------------------------------------
     radius_mm = nozzle_diam / 2.0
     area_mm2 = 3.141592 * (radius_mm ** 2)
-    # 인장강도 (피터의 웹플루이드는 일반 강철의 5배 이상, 약 1200~2000 MPa)
     tensile_strength_mpa = 600.0 + (crosslink * 15.0)
     f_break_n = tensile_strength_mpa * area_mm2
-    
-    # 영률 (GPa)
     youngs_modulus_gpa = 5.0 + (crosslink * 0.2)
 
     st.divider()
     st.subheader("📊 웹슈터 역학 제원")
     st.metric("최대 인장 하중 (F_break)", f"{f_break_n:,.0f} N")
     st.metric("영률 (Elasticity)", f"{youngs_modulus_gpa:.1f} GPa")
-    st.metric("스파이더 근력 허용 G", "15.0 G (초인 스펙)")
 
-# 조작법 가이드 안내
+# 조작법 가이드
 c1, c2, c3 = st.columns(3)
 with c1:
-    st.markdown("🎯 **1. 넉넉한 스윙 사출**")
-    st.info("**[스페이스바]**나 **[마우스 꾹]**: 전방 건물에 자동으로 거미줄을 발사해 부드럽게 가속합니다.")
+    st.markdown("🎯 **1. 스윙 조작**")
+    st.info("**[스페이스바]** or **[마우스 꾹]**: 건물 옥상에 거미줄을 걸어 진자 스윙 가속을 합니다.")
 with c2:
-    st.markdown("🧗 **2. 벽 달라붙기 (Wall Stick)**")
-    st.success("건물 옆면에 닿으면 죽지 않고 **탁 달라붙어 천천히 슬라이딩**합니다. (반데르발스 인력)")
+    st.markdown("🧗 **2. 벽 붙기 & 슈퍼 도약**")
+    st.success("건물 옆면에 닿으면 **달라붙습니다**. 이 상태에서 **클릭/스페이스바**를 누르면 반대편 위로 **슈퍼 점프**합니다!")
 with c3:
-    st.markdown("🚀 **3. 스파이더 슈퍼 점프**")
-    st.warning("벽에 붙은 상태에서 **클릭/스페이스바**를 튕기면 건물 벽을 차고 **공중으로 솟구칩니다!**")
+    st.markdown("💀 **3. 지면 추락 즉사**")
+    st.error("스윙 타이밍을 놓치거나 벽에서 끝까지 흘러내려 **바닥에 닿는 순간 즉시 사망(Game Over)**합니다.")
 
 # ==============================================================================
-# 3. HTML5 Canvas 물리 엔진 (벽타기 & 슈퍼도약 & 이지 맵 탑재)
+# 3. HTML5 Canvas 물리 엔진 (바닥 충돌 즉사 & 벽점프 로직)
 # ==============================================================================
 canvas_html = f"""
 <!DOCTYPE html>
@@ -167,10 +163,10 @@ canvas_html = f"""
     </div>
 
     <div id="game-over">
-        <h2 id="death-reason" style="color: #ef4444; margin:0 0 10px 0;">거미줄 파단!</h2>
-        <p id="death-desc" style="color: #cbd5e1; font-size:14px; margin:0;">장력이 허용 한도를 초과했습니다.</p>
-        <p style="margin: 12px 0 0 0; font-size: 16px; font-weight: bold;">최종 이동 거리: <span id="final-dist">0</span> m</p>
-        <button class="retry-btn" onclick="resetGame()">다시 스윙하기</button>
+        <h2 id="death-reason" style="color: #ef4444; margin:0 0 10px 0;">게임 오버</h2>
+        <p id="death-desc" style="color: #cbd5e1; font-size:14px; margin:0;">추락했습니다.</p>
+        <p style="margin: 12px 0 0 0; font-size: 16px; font-weight: bold;">최종 비행 거리: <span id="final-dist">0</span> m</p>
+        <button class="retry-btn" onclick="resetGame()">다시 시작하기</button>
     </div>
 </div>
 
@@ -179,7 +175,7 @@ canvas_html = f"""
 // 파이썬 공학 상수 주입
 // =============================================================================
 const F_BREAK = {f_break_n};         // 파단 장력 (N)
-const MASS = {mass};                 // 피터 파커 질량 (kg)
+const MASS = {mass};                 // 질량 (kg)
 const G = 9.81;
 const PIXELS_PER_METER = 20;
 
@@ -195,13 +191,12 @@ const deathDesc = document.getElementById("death-desc");
 const finalDist = document.getElementById("final-dist");
 
 // =============================================================================
-// 플레이어 & 월드 상태
+// 상태 변수
 // =============================================================================
 let isAlive = true;
 let isAttached = false;
-let isWallClinging = false; // 벽에 붙어있는 상태
-let clingWall = null;        // 현재 붙어있는 건물 정보
-let clingSide = 1;          // 1: 건물의 왼쪽 벽, -1: 건물의 오른쪽 벽
+let isWallClinging = false; // 벽 부착 여부
+let clingSide = 1;          // 1: 왼쪽 벽, -1: 오른쪽 벽
 let anchor = {{ x: 0, y: 0 }};
 let ropeLength = 0;
 let score = 0;
@@ -209,13 +204,13 @@ let cameraX = 0;
 
 const player = {{
     x: 100,
-    y: 260,
-    vx: 14,                  // 쾌적한 시작 수평 속도
+    y: 220,
+    vx: 14,
     vy: 0,
     radius: 12
 }};
 
-// 건물 생성 (간격 좁히고 루프탑 높이 균일화하여 쾌적한 맵 구성)
+// 건물 생성
 let buildings = [];
 let nextBuildingX = 0;
 
@@ -228,10 +223,9 @@ function initBuildings() {{
 }}
 
 function spawnBuilding() {{
-    const width = 100 + Math.random() * 80;
-    // 옥상 높이를 플레이하기 편하게 안정적인 범위(220~300px)로 설정
-    const height = 220 + Math.random() * 80;
-    const gap = 30 + Math.random() * 40; // 간격을 확 줄여 끊김 방지
+    const width = 110 + Math.random() * 80;
+    const height = 230 + Math.random() * 90; // 안전한 비행 고도 확보
+    const gap = 35 + Math.random() * 35;
     buildings.push({{
         x: nextBuildingX,
         y: canvas.height - height,
@@ -244,32 +238,27 @@ function spawnBuilding() {{
 }}
 
 // =============================================================================
-// 원터치 조작 로직 (스윙 & 벽타기 슈퍼 점프)
+// 조작 로직 (스윙 & 벽점프)
 // =============================================================================
-let inputPressed = false;
-
 function handleActionDown() {{
     if (!isAlive) return;
-    inputPressed = true;
 
-    // [피터 파커 특수능력] 벽에 붙어있을 때 클릭 시 -> 반대편으로 슈퍼 도약!
+    // 1) 벽에 붙어있는 경우 -> 벽을 발로 차며 슈퍼 점프!
     if (isWallClinging) {{
         isWallClinging = false;
-        // 붙어있던 벽을 강하게 발로 차며 도약 (Wall Jump Vector)
-        player.vx = (clingSide === 1 ? -1 : 1) * -16; // 전방 방향으로 튕겨나감
-        player.vy = -18;                               // 높은 상승력
+        player.vx = (clingSide === 1 ? -1 : 1) * -17; // 건물 바깥 전방으로 추진
+        player.vy = -18;                              // 높은 수직 도약력
         isAttached = false;
         return;
     }}
 
-    // 공중에 있을 때 클릭 시 -> 거미줄 사출
+    // 2) 공중 상태인 경우 -> 거미줄 사출
     tryAttachWeb();
 }}
 
 function handleActionUp() {{
-    inputPressed = false;
     if (isAttached) {{
-        isAttached = false; // 줄을 놓으면 관성 탄도 비행
+        isAttached = false; // 관성 비행으로 전환
     }}
 }}
 
@@ -288,7 +277,7 @@ window.addEventListener("keyup", (e) => {{
 canvas.addEventListener("mousedown", handleActionDown);
 window.addEventListener("mouseup", handleActionUp);
 
-// 넉넉한 자동 타겟팅 거미줄 사출
+// 옥상 모서리 자동 타겟팅 거미줄 사출
 function tryAttachWeb() {{
     if (isAttached || isWallClinging) return;
     
@@ -303,7 +292,6 @@ function tryAttachWeb() {{
         const dy = (rooftopY - player.y) / PIXELS_PER_METER;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        // 전방 5m ~ 50m 넓은 범위 내의 옥상 자동 흡착
         if (dx > 3 && dist < 50 && dist < minDistance) {{
             minDistance = dist;
             bestAnchor = {{ x: rooftopX, y: rooftopY }};
@@ -320,34 +308,42 @@ function tryAttachWeb() {{
 }}
 
 // =============================================================================
-// 물리 업데이트 (벽타기 흡착 + 진자 스윙)
+// 물리 업데이트 (추락 즉사 & 벽타기)
 // =============================================================================
 function updatePhysics(dt) {{
     if (!isAlive) return;
 
     let tensionN = 0;
 
-    // A. 벽에 달라붙어 있는 상태 (Wall Cling & Slide)
+    // [사망 조건 1] 지면(바닥) 추락 시 즉각 사망 처리
+    const groundLevel = canvas.height - player.radius - 2;
+    if (player.y >= groundLevel) {{
+        player.y = groundLevel;
+        triggerGameOver("💥 지면 격돌 추락사 (Ground Fatal Impact)", "완충 없이 지면에 정면 충돌하여 치명상을 입었습니다!");
+        return;
+    }}
+
+    // A. 벽에 달라붙어 있는 상태
     if (isWallClinging) {{
         player.vx = 0;
-        // 천천히 미끄러져 내려옴 (게코 도마뱀/거미 족모 마찰 제동)
-        player.vy = 2.0; 
+        player.vy = 2.2; // 벽을 타고 천천히 미끄러져 내려옴
         player.y += player.vy * dt * PIXELS_PER_METER;
         
-        stateBadge.innerText = "🧗 벽 달라붙음 (점프 준비!)";
+        stateBadge.innerText = "🧗 벽 달라붙음 (클릭으로 점프!)";
         stateBadge.style.color = "#f97316";
 
-        // 벽의 끝(지면 근처)까지 내려왔을 때 처리
-        if (player.y >= canvas.height - 30) {{
-            isWallClinging = false;
+        // 벽을 타고 내려오다가 바닥에 닿는 순간 사망
+        if (player.y >= groundLevel) {{
+            triggerGameOver("💥 지면 격돌 추락사 (Ground Fatal Impact)", "벽에서 탈출하지 못하고 지면으로 추락했습니다!");
+            return;
         }}
     }}
-    // B. 공중 비행 / 스윙 상태
+    // B. 비행 / 스윙 상태
     else {{
-        // 1) 기본 중력
+        // 중력 가속
         player.vy += G * dt;
 
-        // 2) 거미줄 스윙 처리
+        // 거미줄 진자 스윙
         if (isAttached) {{
             stateBadge.innerText = "🕸️ 진자 스윙 중 (Swinging)";
             stateBadge.style.color = "#38bdf8";
@@ -369,27 +365,27 @@ function updatePhysics(dt) {{
                 player.x = anchor.x + nx * ropeLength * PIXELS_PER_METER;
                 player.y = anchor.y + ny * ropeLength * PIXELS_PER_METER;
                 
-                // 장력 계산: T = m * (g*cos(theta) + v^2/r)
+                // 장력 T = m * (g*cosθ + v^2/r)
                 const speedSq = player.vx * player.vx + player.vy * player.vy;
                 const cosTheta = -ny;
                 const centripetalAcc = speedSq / ropeLength;
                 tensionN = MASS * Math.max(0, (G * cosTheta + centripetalAcc));
                 
-                // 거미줄 파단 검증
+                // [사망 조건 2] 거미줄 허용 장력 초과 파단
                 if (tensionN > F_BREAK) {{
                     triggerGameOver(
-                        "🕸️ 거미줄 파단 (Material Limit Exceeded)", 
-                        `장력(${{Math.round(tensionN).toLocaleString()}} N)이 웹슈터 한도(${{F_BREAK.toLocaleString()}} N)를 초과하여 끊어졌습니다!`
+                        "🕸️ 거미줄 파단 (Tensile Failure)", 
+                        `스윙 최저점 순간 장력(${{Math.round(tensionN).toLocaleString()}} N)이 고분자 최대 인장한도(${{F_BREAK.toLocaleString()}} N)를 초과하여 줄이 끊어졌습니다!`
                     );
                     return;
                 }}
             }}
         }} else {{
-            stateBadge.innerText = "🦅 탄도 비행 (Free Flight)";
+            stateBadge.innerText = "🦅 자유 비행 (Free Flight)";
             stateBadge.style.color = "#4ade80";
         }}
 
-        // 공기 저항 완화 (시원한 비행 감각)
+        // 공기 저항
         player.vx *= 0.9995;
         player.vy *= 0.9995;
 
@@ -397,36 +393,28 @@ function updatePhysics(dt) {{
         player.x += player.vx * dt * PIXELS_PER_METER;
         player.y += player.vy * dt * PIXELS_PER_METER;
 
-        // 3) [핵심 개선] 건물 충돌 시 사망 대신 '벽 달라붙기' 발동!
+        // 건물 충돌 검사 (벽 달라붙기 판정)
         for (const b of buildings) {{
-            // 건물 좌측 벽 흡착
-            if (player.x + player.radius >= b.x && player.x - player.radius <= b.x + 8 &&
-                player.y > b.y && player.y < canvas.height) {{
+            // 건물 좌측 벽면에 닿았을 때
+            if (player.x + player.radius >= b.x && player.x - player.radius <= b.x + 10 &&
+                player.y > b.y && player.y < canvas.height - 20) {{
                 isWallClinging = true;
-                clingWall = b;
                 clingSide = 1;
                 player.x = b.x - player.radius;
                 isAttached = false;
                 break;
             }}
-            // 건물 옥상 착지
+            // 건물 옥상 상단에 닿았을 때 (러닝 바운드)
             if (player.x >= b.x && player.x <= b.x + b.w &&
-                Math.abs(player.y - b.y) < 15 && player.vy > 0) {{
-                // 옥상 살짝 밟고 튕겨오름 (슈퍼 러닝)
-                player.vy = -10;
-                player.vx = Math.max(player.vx, 14);
+                Math.abs(player.y - b.y) < 14 && player.vy > 0) {{
+                player.y = b.y - player.radius;
+                player.vy = -11; // 옥상을 밟고 높이 튀어오름
+                player.vx = Math.max(player.vx, 15);
             }}
         }}
     }}
 
-    // 지면 충돌 시 바운드 처리 (낙사 방지 패시브)
-    if (player.y >= canvas.height - 25) {{
-        player.y = canvas.height - 25;
-        player.vy = -12; // 바닥을 짚고 높이 바운드
-        player.vx = Math.max(player.vx * 0.8, 8);
-    }}
-
-    // 건물 순환 생성
+    // 건물 생성 및 제거
     if (player.x + canvas.width > nextBuildingX) {{
         spawnBuilding();
     }}
@@ -435,7 +423,7 @@ function updatePhysics(dt) {{
     // 카메라 추적
     cameraX = player.x - 220;
 
-    // HUD 갱신
+    // HUD 수치 갱신
     score = Math.max(0, Math.floor((player.x - 100) / PIXELS_PER_METER));
     const speedKmh = Math.round(Math.sqrt(player.vx*player.vx + player.vy*player.vy) * 3.6);
     hudDist.innerText = score + " m";
@@ -455,7 +443,7 @@ function triggerGameOver(reason, desc) {{
 
 function resetGame() {{
     player.x = 100;
-    player.y = 260;
+    player.y = 220;
     player.vx = 14;
     player.vy = 0;
     isAlive = true;
@@ -473,7 +461,7 @@ function draw() {{
     ctx.save();
     ctx.translate(-cameraX, 0);
 
-    // 1) 건물 렌더링
+    // 1) 고층 빌딩
     for (const b of buildings) {{
         ctx.fillStyle = b.color;
         ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -488,13 +476,17 @@ function draw() {{
             }}
         }}
 
-        // 옥상 타겟 가이드
+        // 옥상 타겟 가이드라인
         ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 2;
         ctx.strokeRect(b.x, b.y, b.w, 4);
     }}
 
-    // 2) 거미줄
+    // 2) 위험 지면 (추락 시 사망 경고 붉은 라인)
+    ctx.fillStyle = "#ef4444";
+    ctx.fillRect(player.x - 400, canvas.height - 8, canvas.width + 800, 8);
+
+    // 3) 거미줄 렌더링
     if (isAttached) {{
         ctx.beginPath();
         ctx.moveTo(anchor.x, anchor.y);
@@ -506,18 +498,17 @@ function draw() {{
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // 앵커 지점
+        // 앵커 표시
         ctx.beginPath();
         ctx.arc(anchor.x, anchor.y, 6, 0, Math.PI * 2);
         ctx.fillStyle = "#ef4444";
         ctx.fill();
     }}
 
-    // 3) 스파이더맨 캐릭터
+    // 4) 스파이더맨 캐릭터
     ctx.save();
     ctx.translate(player.x, player.y);
     
-    // 벽에 붙었을 때와 날아갈 때의 포즈 각도 제어
     if (isWallClinging) {{
         ctx.rotate(clingSide === 1 ? -Math.PI / 2 : Math.PI / 2);
     }} else {{
@@ -525,7 +516,7 @@ function draw() {{
         ctx.rotate(angle);
     }}
 
-    // 몸체 (스파이더 슈트)
+    // 몸체 (레드 슈트)
     ctx.beginPath();
     ctx.ellipse(0, 0, 15, 9, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#e11d48";
@@ -547,7 +538,7 @@ function draw() {{
     ctx.restore();
 }}
 
-// 60FPS 애니메이션 루프
+// 애니메이션 루프
 let lastTime = performance.now();
 function gameLoop(now) {{
     const dt = Math.min((now - lastTime) / 1000, 0.05);
@@ -569,13 +560,14 @@ requestAnimationFrame(gameLoop);
 components.html(canvas_html, height=580, scrolling=False)
 
 # ==============================================================================
-# 4. 세특 탐구 보고서 연계 정리 (생체모방 정전기 흡착 공학)
+# 4. 세특 탐구 보고서 연계 정리 (충격량 및 생체역학)
 # ==============================================================================
-with st.expander("📝 [생기부 세특 작성 팁] 벽타기(Wall-Cling)의 생체모방 공학적 원리"):
+with st.expander("📝 [생기부 세특 작성 팁] 지면 충돌 충격량(Impulse)과 고분자 장력 역학"):
     st.markdown(r"""
-    * **반데르발스 힘(Van der Waals Force)과 건식 접착(Dry Adhesion)**:
-      * 스파이더맨이 매끄러운 고층 빌딩 벽면에 달라붙을 수 있는 원리는 도마뱀붙이(Gecko)와 거미의 발바닥에 수억 개 존재하는 미세 주걱 형태의 **나노 강모(Setae & Spatulae)** 구조에 기반합니다.
-      * 접촉 면적이 극대화되면서 순간적인 쌍극자 유도에 의한 분자 간 인력(반데르발스 힘, 단위 면적당 수십 $\text{N/cm}^2$)이 발생하여 체중을 지탱합니다.
-    * **동적 벽면 반발 도약(Wall Jump Mechanics)**:
-      * 벽면에 부착된 상태에서 탄성 근섬유의 에너지를 순간적으로 방출($F_{\text{push}} = m \cdot a$)하여 수평 및 수직 운동량 성분을 동시에 생성하는 생체 모멘텀 전환 알고리즘을 프로그램에 적용했습니다.
+    * **운동량-충격량 정리와 인체 손상 임계치**:
+      $$I = \int F \, dt = \Delta p = m \Delta v$$
+      고공 낙하 시 바닥과의 충돌 시간이 극히 짧을 경우($\Delta t \to 0$), 파일럿에게 가해지는 순간 충격력($F = \frac{\Delta p}{\Delta t}$)이 인체 뼈와 장기의 한계 지탱 응력을 초과하여 사망에 이르게 됩니다.
+    * **고분자 거미줄 파단과 안전 계수(Safety Factor)**:
+      $$S_F = \frac{F_{\text{break}}}{T_{\max}} > 1.0$$
+      스윙 최저점에서 장력($T$)이 재료의 극한 하중을 넘어서면 줄이 끊어지며 강제 자유 낙하 상태로 전환되도록 설계하여 재료역학적 안전 계수의 중요성을 실증했습니다.
     """)
