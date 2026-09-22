@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 # 1. Streamlit 페이지 설정
 # ==============================================================================
 st.set_page_config(
-    page_title="스파이더맨 웹슈터 & 벽타기 액션 랩",
+    page_title="스파이더맨 웹슈터 공학 랩 & 파단 진단 시스템",
     page_icon="🕸️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -19,24 +19,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🕸️ 피터 파커의 고공 스파이더 액션 & 역학 시뮬레이터")
-st.caption("건물 벽 흡착 및 반발 도약, 진자 스윙, 고공 추락 충격량 역학 결합")
+st.title("🕸️ 피터 파커의 고분자 웹슈터 역학 랩 & 파단 진단 시스템")
+st.caption("진자 스윙 역학과 고분자 파단 역학을 결합한 실시간 피드백 시뮬레이터")
 
 # ==============================================================================
-# 2. 사이드바: 고분자 물성 및 신체 조건
+# 2. 사이드바: 고분자 물성 및 피터 파커 신체 조건
 # ==============================================================================
 with st.sidebar:
-    st.header("🧪 피터 파커 바이오 스펙 (Lab)")
+    st.header("🧪 웹 플루이드 고분자 배합 (Lab)")
     
     crosslink = st.slider(
         "거미줄 가교 밀도 (Crosslink, %)",
-        min_value=30, max_value=100, value=85, step=5,
-        help="단백질 사슬 결합도. 높을수록 장력을 잘 버팁니다."
+        min_value=20, max_value=100, value=70, step=5,
+        help="단백질 사슬 결합 강도. 인장 강도와 영률을 좌우합니다."
     )
     
     nozzle_diam = st.slider(
-        "웹슈터 노즐 구경 (Nozzle, mm)",
-        min_value=0.8, max_value=3.0, value=1.5, step=0.1
+        "웹슈터 사출 구경 (Nozzle Gauge, mm)",
+        min_value=0.6, max_value=3.0, value=1.2, step=0.1,
+        help="거미줄의 굵기. 단면적이 커질수록 견디는 절대 하중이 급증합니다."
     )
     
     mass = st.number_input(
@@ -49,29 +50,33 @@ with st.sidebar:
     # --------------------------------------------------------------------------
     radius_mm = nozzle_diam / 2.0
     area_mm2 = 3.141592 * (radius_mm ** 2)
-    tensile_strength_mpa = 600.0 + (crosslink * 15.0)
+    # 인장강도 (MPa)
+    tensile_strength_mpa = 500.0 + (crosslink * 14.0)
+    # 최대 파단 하중 F_break (N)
     f_break_n = tensile_strength_mpa * area_mm2
-    youngs_modulus_gpa = 5.0 + (crosslink * 0.2)
+    # 영률 (GPa)
+    youngs_modulus_gpa = 4.0 + (crosslink * 0.18)
 
     st.divider()
     st.subheader("📊 웹슈터 역학 제원")
-    st.metric("최대 인장 하중 (F_break)", f"{f_break_n:,.0f} N")
+    st.metric("최대 허용 장력 (F_break)", f"{f_break_n:,.0f} N")
+    st.metric("인장 강도 (Tensile Strength)", f"{tensile_strength_mpa:,.0f} MPa")
     st.metric("영률 (Elasticity)", f"{youngs_modulus_gpa:.1f} GPa")
 
-# 조작법 가이드
+# 조작 가이드 안내
 c1, c2, c3 = st.columns(3)
 with c1:
-    st.markdown("🎯 **1. 스윙 조작**")
-    st.info("**[스페이스바]** or **[마우스 꾹]**: 건물 옥상에 거미줄을 걸어 진자 스윙 가속을 합니다.")
+    st.markdown("🎯 **1. 텐션 관리 스윙**")
+    st.info("**[스페이스바]** or **[마우스 꾹]**: 거미줄 사출. 속도가 빠를 땐 줄을 일찍 놓아야 과부하를 피합니다.")
 with c2:
     st.markdown("🧗 **2. 벽 붙기 & 슈퍼 도약**")
-    st.success("건물 옆면에 닿으면 **달라붙습니다**. 이 상태에서 **클릭/스페이스바**를 누르면 반대편 위로 **슈퍼 점프**합니다!")
+    st.success("건물 옆면에 닿으면 **벽에 흡착**되며, 이때 **클릭/스페이스바**를 누르면 대각선 위로 **슈퍼 점프**합니다.")
 with c3:
-    st.markdown("💀 **3. 지면 추락 즉사**")
-    st.error("스윙 타이밍을 놓치거나 벽에서 끝까지 흘러내려 **바닥에 닿는 순간 즉시 사망(Game Over)**합니다.")
+    st.markdown("⚠️ **3. 공학적 파단 진단**")
+    st.warning("거미줄이 끊어지면 **원심력 초과 / 반경 부족 / 단면적 부족** 등 실패 원인과 수치 처방전이 출력됩니다.")
 
 # ==============================================================================
-# 3. HTML5 Canvas 물리 엔진 (바닥 충돌 즉사 & 벽점프 로직)
+# 3. HTML5 Canvas 물리 엔진 (파단 피드백 진단 엔진 내장)
 # ==============================================================================
 canvas_html = f"""
 <!DOCTYPE html>
@@ -127,23 +132,44 @@ canvas_html = f"""
         position: absolute;
         top: 50%; left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(15, 23, 42, 0.95);
-        padding: 24px 36px;
-        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.96);
+        padding: 24px 32px;
+        border-radius: 14px;
         border: 2px solid #ef4444;
-        text-align: center;
-        box-shadow: 0 20px 25px -5px rgba(239, 68, 68, 0.3);
+        width: 82%;
+        max-width: 620px;
+        box-shadow: 0 20px 30px -5px rgba(239, 68, 68, 0.4);
+    }}
+    .diag-card {{
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid #475569;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 12px 0;
+        text-align: left;
+        font-size: 13px;
+        line-height: 1.6;
+    }}
+    .diag-title {{
+        color: #fca5a5;
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }}
     button.retry-btn {{
-        margin-top: 16px;
+        margin-top: 14px;
         background: #ef4444;
         color: white;
         border: none;
-        padding: 10px 22px;
+        padding: 10px 24px;
         font-size: 15px;
         font-weight: 700;
         border-radius: 6px;
         cursor: pointer;
+        width: 100%;
     }}
     button.retry-btn:hover {{
         background: #dc2626;
@@ -158,15 +184,24 @@ canvas_html = f"""
     <div id="hud">
         <div class="hud-box">거리: <span id="hud-dist" style="color:#38bdf8;">0 m</span></div>
         <div class="hud-box">속도: <span id="hud-speed" style="color:#4ade80;">0 km/h</span></div>
-        <div class="hud-box">상태: <span id="state-badge">비행 중 (Flying)</span></div>
-        <div class="hud-box">장력: <span id="hud-tension" style="color:#fbbf24;">0 N</span></div>
+        <div class="hud-box">상태: <span id="state-badge">비행 중</span></div>
+        <div class="hud-box">장력: <span id="hud-tension" style="color:#fbbf24;">0 N</span> / {f_break_n:,.0f} N</div>
     </div>
 
+    <!-- 정밀 진단 팝업 창 -->
     <div id="game-over">
-        <h2 id="death-reason" style="color: #ef4444; margin:0 0 10px 0;">게임 오버</h2>
-        <p id="death-desc" style="color: #cbd5e1; font-size:14px; margin:0;">추락했습니다.</p>
-        <p style="margin: 12px 0 0 0; font-size: 16px; font-weight: bold;">최종 비행 거리: <span id="final-dist">0</span> m</p>
-        <button class="retry-btn" onclick="resetGame()">다시 시작하기</button>
+        <h2 id="death-reason" style="color: #ef4444; margin:0 0 8px 0; font-size: 22px;">거미줄 파단!</h2>
+        <p id="death-desc" style="color: #cbd5e1; font-size:14px; margin:0;">장력 초과 파단이 발생했습니다.</p>
+        
+        <div class="diag-card" id="diag-panel">
+            <div class="diag-title">🔬 피터 파커의 공학적 원인 분석 (Diagnostic Report)</div>
+            <div id="diag-details" style="color: #e2e8f0;">분석 데이터를 계산 중입니다...</div>
+        </div>
+
+        <p style="margin: 8px 0 0 0; font-size: 15px; font-weight: bold; text-align: center;">
+            최종 비행 기록: <span id="final-dist" style="color:#38bdf8;">0</span> m
+        </p>
+        <button class="retry-btn" onclick="resetGame()">다시 도전하기</button>
     </div>
 </div>
 
@@ -174,10 +209,12 @@ canvas_html = f"""
 // =============================================================================
 // 파이썬 공학 상수 주입
 // =============================================================================
-const F_BREAK = {f_break_n};         // 파단 장력 (N)
+const F_BREAK = {f_break_n};         // 파단 장력 한도 (N)
 const MASS = {mass};                 // 질량 (kg)
 const G = 9.81;
 const PIXELS_PER_METER = 20;
+const NOZZLE_DIAM = {nozzle_diam};
+const CROSSLINK = {crosslink};
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -188,15 +225,16 @@ const stateBadge = document.getElementById("state-badge");
 const gameOverPanel = document.getElementById("game-over");
 const deathReason = document.getElementById("death-reason");
 const deathDesc = document.getElementById("death-desc");
+const diagDetails = document.getElementById("diag-details");
 const finalDist = document.getElementById("final-dist");
 
 // =============================================================================
-// 상태 변수
+// 게임 상태 변수
 // =============================================================================
 let isAlive = true;
 let isAttached = false;
-let isWallClinging = false; // 벽 부착 여부
-let clingSide = 1;          // 1: 왼쪽 벽, -1: 오른쪽 벽
+let isWallClinging = false;
+let clingSide = 1;
 let anchor = {{ x: 0, y: 0 }};
 let ropeLength = 0;
 let score = 0;
@@ -210,7 +248,7 @@ const player = {{
     radius: 12
 }};
 
-// 건물 생성
+// 건물 숲 생성
 let buildings = [];
 let nextBuildingX = 0;
 
@@ -224,7 +262,7 @@ function initBuildings() {{
 
 function spawnBuilding() {{
     const width = 110 + Math.random() * 80;
-    const height = 230 + Math.random() * 90; // 안전한 비행 고도 확보
+    const height = 230 + Math.random() * 90;
     const gap = 35 + Math.random() * 35;
     buildings.push({{
         x: nextBuildingX,
@@ -238,27 +276,25 @@ function spawnBuilding() {{
 }}
 
 // =============================================================================
-// 조작 로직 (스윙 & 벽점프)
+// 조작 로직
 // =============================================================================
 function handleActionDown() {{
     if (!isAlive) return;
 
-    // 1) 벽에 붙어있는 경우 -> 벽을 발로 차며 슈퍼 점프!
     if (isWallClinging) {{
         isWallClinging = false;
-        player.vx = (clingSide === 1 ? -1 : 1) * -17; // 건물 바깥 전방으로 추진
-        player.vy = -18;                              // 높은 수직 도약력
+        player.vx = (clingSide === 1 ? -1 : 1) * -17;
+        player.vy = -18;
         isAttached = false;
         return;
     }}
 
-    // 2) 공중 상태인 경우 -> 거미줄 사출
     tryAttachWeb();
 }}
 
 function handleActionUp() {{
     if (isAttached) {{
-        isAttached = false; // 관성 비행으로 전환
+        isAttached = false;
     }}
 }}
 
@@ -277,7 +313,6 @@ window.addEventListener("keyup", (e) => {{
 canvas.addEventListener("mousedown", handleActionDown);
 window.addEventListener("mouseup", handleActionUp);
 
-// 옥상 모서리 자동 타겟팅 거미줄 사출
 function tryAttachWeb() {{
     if (isAttached || isWallClinging) return;
     
@@ -308,44 +343,74 @@ function tryAttachWeb() {{
 }}
 
 // =============================================================================
-// 물리 업데이트 (추락 즉사 & 벽타기)
+// 파단 정밀 피드백 생성 엔진 (Diagnostic Feedback Engine)
+// =============================================================================
+function analyzeWebFracture(tensionN, speedKmh, radiusM, centripetalAcc, gravityComponent) {{
+    const excess = tensionN - F_BREAK;
+    const excessPct = Math.round((excess / F_BREAK) * 100);
+    
+    // 최소 필요 노즐 구경 역산: F_break = sigma * pi*(d/2)^2 => d = 2 * sqrt(T / (pi * sigma))
+    const currentSigma = 500.0 + (CROSSLINK * 14.0); // MPa
+    const reqNozzleDiam = (2.0 * Math.sqrt(tensionN / (Math.PI * currentSigma))).toFixed(2);
+    
+    // 원인 유형 분류
+    let primaryCause = "";
+    let actionGuide = "";
+
+    if (centripetalAcc > 40) {{
+        primaryCause = `🌪️ <b>구심 가속도 폭증 (${(centripetalAcc/G).toFixed(1)} G)</b>: 스윙 속도(${speedKmh} km/h)가 너무 빨라 원심력이 거미줄 지탱 한계를 압도했습니다.`;
+        actionGuide = `👉 <b>플레이 처방</b>: 최저점에 도달하기 직전 스페이스바를 놓아 탄도 비행으로 넘어가거나, 좌측 사이드바에서 <b>노즐 구경을 ${reqNozzleDiam} mm 이상</b>으로 키우십시오.`;
+    }} else if (radiusM < 12) {{
+        primaryCause = `📐 <b>초단거리 곡률 반경 (${radiusM.toFixed(1)} m)</b>: 앵커와 너무 가까운 거리에서 급격하게 회전하여 회전 반경($r$) 감소로 인한 장력 집중이 발생했습니다.`;
+        actionGuide = `👉 <b>플레이 처방</b>: 건물 옥상과 거리를 두고 먼 지점에 사출하여 완만한 스윙 호(Arc)를 그리거나, <b>가교 밀도</b>를 높여 기본 인장강도를 보강하십시오.`;
+    }} else {{
+        primaryCause = `⚖️ <b>동적 하중 한계 초과</b>: 고공 낙하 중력 성분과 운동 에너지가 복합되어 거미줄의 정적 안전계수를 상쇄했습니다.`;
+        actionGuide = `👉 <b>공학 튜닝 처방</b>: 현재 배합(${NOZZLE_DIAM}mm, ${CROSSLINK}%)으로는 ${tensionN.toFixed(0)} N의 충격을 감당할 수 없습니다. <b>노즐을 최소 ${reqNozzleDiam} mm</b>로 개조하십시오.`;
+    }}
+
+    return `
+        • <b>순간 측정 장력</b>: <span style="color:#ef4444; font-weight:bold;">${Math.round(tensionN).toLocaleString()} N</span> (허용 한도 대비 <b>+${excessPct}%</b> 초과)<br>
+        • <b>주요 역학 원인</b>: ${primaryCause}<br>
+        • <b>공학적 솔루션</b>: ${actionGuide}
+    `;
+}}
+
+// =============================================================================
+// 물리 업데이트 루프
 // =============================================================================
 function updatePhysics(dt) {{
     if (!isAlive) return;
 
     let tensionN = 0;
-
-    // [사망 조건 1] 지면(바닥) 추락 시 즉각 사망 처리
     const groundLevel = canvas.height - player.radius - 2;
+
+    // [사망 판정 1] 지면 충돌
     if (player.y >= groundLevel) {{
         player.y = groundLevel;
-        triggerGameOver("💥 지면 격돌 추락사 (Ground Fatal Impact)", "완충 없이 지면에 정면 충돌하여 치명상을 입었습니다!");
+        triggerGroundGameOver();
         return;
     }}
 
-    // A. 벽에 달라붙어 있는 상태
+    // A. 벽 달라붙기
     if (isWallClinging) {{
         player.vx = 0;
-        player.vy = 2.2; // 벽을 타고 천천히 미끄러져 내려옴
+        player.vy = 2.2;
         player.y += player.vy * dt * PIXELS_PER_METER;
         
-        stateBadge.innerText = "🧗 벽 달라붙음 (클릭으로 점프!)";
+        stateBadge.innerText = "🧗 벽 달라붙음 (슈퍼 점프 대기)";
         stateBadge.style.color = "#f97316";
 
-        // 벽을 타고 내려오다가 바닥에 닿는 순간 사망
         if (player.y >= groundLevel) {{
-            triggerGameOver("💥 지면 격돌 추락사 (Ground Fatal Impact)", "벽에서 탈출하지 못하고 지면으로 추락했습니다!");
+            triggerGroundGameOver();
             return;
         }}
     }}
-    // B. 비행 / 스윙 상태
+    // B. 비행 & 진자 스윙
     else {{
-        // 중력 가속
         player.vy += G * dt;
 
-        // 거미줄 진자 스윙
         if (isAttached) {{
-            stateBadge.innerText = "🕸️ 진자 스윙 중 (Swinging)";
+            stateBadge.innerText = "🕸️ 진자 스윙 중";
             stateBadge.style.color = "#38bdf8";
 
             const dx = (player.x - anchor.x) / PIXELS_PER_METER;
@@ -365,37 +430,34 @@ function updatePhysics(dt) {{
                 player.x = anchor.x + nx * ropeLength * PIXELS_PER_METER;
                 player.y = anchor.y + ny * ropeLength * PIXELS_PER_METER;
                 
-                // 장력 T = m * (g*cosθ + v^2/r)
+                // 장력 계산 공식: T = m * (g*cosθ + v^2/r)
                 const speedSq = player.vx * player.vx + player.vy * player.vy;
                 const cosTheta = -ny;
                 const centripetalAcc = speedSq / ropeLength;
-                tensionN = MASS * Math.max(0, (G * cosTheta + centripetalAcc));
+                const gravityComponent = G * cosTheta;
+                tensionN = MASS * Math.max(0, (gravityComponent + centripetalAcc));
                 
-                // [사망 조건 2] 거미줄 허용 장력 초과 파단
+                // [사망 판정 2] 거미줄 파단 발생 시 정밀 피드백 출력
                 if (tensionN > F_BREAK) {{
-                    triggerGameOver(
-                        "🕸️ 거미줄 파단 (Tensile Failure)", 
-                        `스윙 최저점 순간 장력(${{Math.round(tensionN).toLocaleString()}} N)이 고분자 최대 인장한도(${{F_BREAK.toLocaleString()}} N)를 초과하여 줄이 끊어졌습니다!`
-                    );
+                    const speedKmh = Math.round(Math.sqrt(speedSq) * 3.6);
+                    const feedbackHTML = analyzeWebFracture(tensionN, speedKmh, ropeLength, centripetalAcc, gravityComponent);
+                    triggerFractureGameOver(feedbackHTML);
                     return;
                 }}
             }}
         }} else {{
-            stateBadge.innerText = "🦅 자유 비행 (Free Flight)";
+            stateBadge.innerText = "🦅 자유 탄도 비행";
             stateBadge.style.color = "#4ade80";
         }}
 
-        // 공기 저항
         player.vx *= 0.9995;
         player.vy *= 0.9995;
 
-        // 위치 적분
         player.x += player.vx * dt * PIXELS_PER_METER;
         player.y += player.vy * dt * PIXELS_PER_METER;
 
-        // 건물 충돌 검사 (벽 달라붙기 판정)
+        // 건물 벽 충돌 검사
         for (const b of buildings) {{
-            // 건물 좌측 벽면에 닿았을 때
             if (player.x + player.radius >= b.x && player.x - player.radius <= b.x + 10 &&
                 player.y > b.y && player.y < canvas.height - 20) {{
                 isWallClinging = true;
@@ -404,17 +466,17 @@ function updatePhysics(dt) {{
                 isAttached = false;
                 break;
             }}
-            // 건물 옥상 상단에 닿았을 때 (러닝 바운드)
+            // 옥상 바운드 러닝
             if (player.x >= b.x && player.x <= b.x + b.w &&
                 Math.abs(player.y - b.y) < 14 && player.vy > 0) {{
                 player.y = b.y - player.radius;
-                player.vy = -11; // 옥상을 밟고 높이 튀어오름
+                player.vy = -11;
                 player.vx = Math.max(player.vx, 15);
             }}
         }}
     }}
 
-    // 건물 생성 및 제거
+    // 건물 생성 관리
     if (player.x + canvas.width > nextBuildingX) {{
         spawnBuilding();
     }}
@@ -423,20 +485,45 @@ function updatePhysics(dt) {{
     // 카메라 추적
     cameraX = player.x - 220;
 
-    // HUD 수치 갱신
+    // HUD 업데이트
     score = Math.max(0, Math.floor((player.x - 100) / PIXELS_PER_METER));
-    const speedKmh = Math.round(Math.sqrt(player.vx*player.vx + player.vy*player.vy) * 3.6);
+    const currentSpeedKmh = Math.round(Math.sqrt(player.vx*player.vx + player.vy*player.vy) * 3.6);
     hudDist.innerText = score + " m";
-    hudSpeed.innerText = speedKmh + " km/h";
-    hudTension.innerText = Math.round(tensionN).toLocaleString() + " N";
+    hudSpeed.innerText = currentSpeedKmh + " km/h";
+    
+    // 장력 경고 색상 표시 (85% 이상 시 붉은색 경고)
+    const tensionRatio = tensionN / F_BREAK;
+    if (tensionRatio > 0.85) {{
+        hudTension.innerHTML = `<span style="color:#ef4444; animation: blink 0.5s infinite;">${Math.round(tensionN).toLocaleString()} N (과부하!)</span>`;
+    }} else {{
+        hudTension.innerText = Math.round(tensionN).toLocaleString() + " N";
+    }}
 }}
 
-function triggerGameOver(reason, desc) {{
+// =============================================================================
+// 게임오버 트리거 함수들
+// =============================================================================
+function triggerFractureGameOver(feedbackHTML) {{
     isAlive = false;
     isAttached = false;
     isWallClinging = false;
-    deathReason.innerText = reason;
-    deathDesc.innerText = desc;
+    deathReason.innerText = "💥 거미줄 인장 파단 (Web Line Snapped!)";
+    deathDesc.innerText = "스윙 도중 줄에 걸린 순간 장력이 고분자 한계치를 초과하여 끊어졌습니다.";
+    diagDetails.innerHTML = feedbackHTML;
+    finalDist.innerText = score;
+    gameOverPanel.style.display = "block";
+}}
+
+function triggerGroundGameOver() {{
+    isAlive = false;
+    isAttached = false;
+    isWallClinging = false;
+    deathReason.innerText = "💀 지면 충돌 추락사 (Ground Impact)";
+    deathDesc.innerText = "고공 낙하 충격량을 분산하지 못하고 바닥에 정면 충돌했습니다.";
+    diagDetails.innerHTML = `
+        • <b>충돌 상황</b>: 스윙 앵커가 끊기거나 벽에서 탈출하지 못해 지면에 격돌함.<br>
+        • <b>플레이 처방</b>: 바닥에 닿기 전 <b>[스페이스바]</b>로 다음 건물 옥상에 재사출하거나, 벽에 달라붙었을 때 지체 없이 슈퍼 점프를 입력하십시오!
+    `;
     finalDist.innerText = score;
     gameOverPanel.style.display = "block";
 }}
@@ -466,7 +553,6 @@ function draw() {{
         ctx.fillStyle = b.color;
         ctx.fillRect(b.x, b.y, b.w, b.h);
         
-        // 창문
         ctx.fillStyle = b.windowColor;
         for (let wy = b.y + 16; wy < canvas.height - 20; wy += 32) {{
             for (let wx = b.x + 12; wx < b.x + b.w - 12; wx += 22) {{
@@ -476,17 +562,16 @@ function draw() {{
             }}
         }}
 
-        // 옥상 타겟 가이드라인
         ctx.strokeStyle = "#38bdf8";
         ctx.lineWidth = 2;
         ctx.strokeRect(b.x, b.y, b.w, 4);
     }}
 
-    // 2) 위험 지면 (추락 시 사망 경고 붉은 라인)
+    // 2) 바닥 위험선
     ctx.fillStyle = "#ef4444";
     ctx.fillRect(player.x - 400, canvas.height - 8, canvas.width + 800, 8);
 
-    // 3) 거미줄 렌더링
+    // 3) 거미줄 (과부하 시 붉은색 발광 이펙트)
     if (isAttached) {{
         ctx.beginPath();
         ctx.moveTo(anchor.x, anchor.y);
@@ -498,7 +583,6 @@ function draw() {{
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // 앵커 표시
         ctx.beginPath();
         ctx.arc(anchor.x, anchor.y, 6, 0, Math.PI * 2);
         ctx.fillStyle = "#ef4444";
@@ -516,19 +600,16 @@ function draw() {{
         ctx.rotate(angle);
     }}
 
-    // 몸체 (레드 슈트)
     ctx.beginPath();
     ctx.ellipse(0, 0, 15, 9, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#e11d48";
     ctx.fill();
 
-    // 슈트 블루 패턴
     ctx.beginPath();
     ctx.ellipse(-4, 0, 6, 7, 0, 0, Math.PI * 2);
     ctx.fillStyle = "#2563eb";
     ctx.fill();
 
-    // 마스크 화이트 아이
     ctx.beginPath();
     ctx.ellipse(6, -3, 5, 2.5, Math.PI / 5, 0, Math.PI * 2);
     ctx.fillStyle = "#ffffff";
@@ -557,17 +638,17 @@ requestAnimationFrame(gameLoop);
 </html>
 """
 
-components.html(canvas_html, height=580, scrolling=False)
+components.html(canvas_html, height=590, scrolling=False)
 
 # ==============================================================================
-# 4. 세특 탐구 보고서 연계 정리 (충격량 및 생체역학)
+# 4. 세특 탐구 보고서 연계 정리 (진단 알고리즘 및 역학 최적화)
 # ==============================================================================
-with st.expander("📝 [생기부 세특 작성 팁] 지면 충돌 충격량(Impulse)과 고분자 장력 역학"):
+with st.expander("📝 [생기부 세특 작성 팁] 거미줄 파단 진단 알고리즘과 재료 최적화 수식"):
     st.markdown(r"""
-    * **운동량-충격량 정리와 인체 손상 임계치**:
-      $$I = \int F \, dt = \Delta p = m \Delta v$$
-      고공 낙하 시 바닥과의 충돌 시간이 극히 짧을 경우($\Delta t \to 0$), 파일럿에게 가해지는 순간 충격력($F = \frac{\Delta p}{\Delta t}$)이 인체 뼈와 장기의 한계 지탱 응력을 초과하여 사망에 이르게 됩니다.
-    * **고분자 거미줄 파단과 안전 계수(Safety Factor)**:
-      $$S_F = \frac{F_{\text{break}}}{T_{\max}} > 1.0$$
-      스윙 최저점에서 장력($T$)이 재료의 극한 하중을 넘어서면 줄이 끊어지며 강제 자유 낙하 상태로 전환되도록 설계하여 재료역학적 안전 계수의 중요성을 실증했습니다.
+    * **파단 원인 분해 알고리즘(Failure Analysis Algorithm)**:
+      * 스윙 장력 수식 $T = m\left(g\cos\theta + \frac{v^2}{r}\right)$에서 파단 순간의 각 항($g\cos\theta$ 대 $\frac{v^2}{r}$)의 기여도를 분해하여, 과도한 속도(구심 가속도 폭증)인지 회전 반경 부족(곡률 과소)인지 역학적으로 판별하도록 프로그래밍함.
+    * **임계 노즐 구경 역산(Inverse Design of Nozzle Diameter)**:
+      * 파단 장력 $T_{\text{fail}}$ 발생 시, 재료가 이를 견디기 위해 요구되는 최소 노즐 직경 $d_{\text{req}}$를 극한 인장강도($\sigma_{\text{uts}}$)로부터 역산하는 수식을 피드백 패널에 실시간 렌더링함:
+      $$d_{\text{req}} = 2 \cdot \sqrt{\frac{T_{\text{fail}}}{\pi \cdot \sigma_{\text{uts}}}}$$
+    * 이를 통해 사용자가 직관적인 수치 피드백을 바탕으로 고분자 배합 파라미터를 최적화하는 **'공학적 설계-검증 피드백 루프'**를 완성함.
     """)
