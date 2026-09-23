@@ -61,7 +61,7 @@ game_html = """
         gap: 10px;
     }
     .hud-card {
-        background: rgba(15, 23, 42, 0.8);
+        background: rgba(15, 23, 42, 0.85);
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 10px;
         padding: 10px 14px;
@@ -80,6 +80,27 @@ game_html = """
         color: #38bdf8;
     }
     .hud-val span { font-size: 12px; color: #64748b; font-weight: 600; }
+
+    /* 플립/스턴트 알림 텍스트 */
+    #stunt-alert {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%) scale(0.8);
+        color: #facc15;
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: 2px;
+        text-shadow: 0 0 15px rgba(250, 204, 21, 0.8);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 15;
+        transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #stunt-alert.show {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.15);
+    }
     
     /* 조작 가이드 안내 */
     #controls-guide {
@@ -159,11 +180,14 @@ game_html = """
     </div>
 </div>
 
+<div id="stunt-alert">✨ ACROBATIC FLIP! ✨</div>
+
 <div id="controls-guide">
     • <span class="key-badge">건물 클릭</span> 조준한 건물로 고속 웹집(Web-Zip) 비행<br>
     • <span class="key-badge">드래그</span> 시점/카메라 360도 회전<br>
     • <span class="key-badge">W</span> <span class="key-badge">A</span> <span class="key-badge">S</span> <span class="key-badge">D</span> 지상 이동 및 <b>점프/체공 중 방향 조절</b><br>
-    • <span class="key-badge">Space</span> 높이 점프 / 비행 중 탄력 도약
+    • <span class="key-badge">Space</span> 일반 점프<br>
+    • <span class="key-badge">Space 더블 탭</span> <b>공중 360도 회전 & 슈퍼 하이 점프!</b>
 </div>
 
 <div id="canvas-container"></div>
@@ -195,7 +219,7 @@ game_html = """
 
     for (let x = -CITY_SIZE/2; x < CITY_SIZE/2; x++) {
         for (let z = -CITY_SIZE/2; z < CITY_SIZE/2; z++) {
-            if (Math.abs(x) < 2 && Math.abs(z) < 2) continue; // 중앙 스폰 지점
+            if (Math.abs(x) < 2 && Math.abs(z) < 2) continue;
             const h = 35 + Math.random() * 85;
             const w = 18 + Math.random() * 12;
             const d = 18 + Math.random() * 12;
@@ -226,39 +250,46 @@ game_html = """
     }
     let ringCount = 0;
 
-    // --- 4. 플레이어 (스파이더맨 아바타) ---
+    // --- 4. 플레이어 & 시각 메쉬 그룹 ---
     const playerGroup = new THREE.Group();
     scene.add(playerGroup);
 
+    // 공중제비 전용 회전 서브그룹
+    const flipMeshGroup = new THREE.Group();
+    playerGroup.add(flipMeshGroup);
+
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
     torso.position.y = 0.9;
-    playerGroup.add(torso);
+    flipMeshGroup.add(torso);
 
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
     head.position.y = 1.75;
-    playerGroup.add(head);
+    flipMeshGroup.add(head);
 
     const legs = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.45), new THREE.MeshStandardMaterial({ color: 0x2563eb }));
     legs.position.y = 0.35;
-    playerGroup.add(legs);
+    flipMeshGroup.add(legs);
 
-    // 거미줄
+    // 거미줄 라인
     const webMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
     const webGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
     const webLine = new THREE.Line(webGeo, webMat);
     webLine.visible = false;
     scene.add(webLine);
 
-    // 물리 상태
+    // 플레이어 물리 & 공중제비 상태
     const player = {
         pos: new THREE.Vector3(0, 15, 0),
         vel: new THREE.Vector3(),
         isGrounded: false,
         isWebZipping: false,
-        zipTarget: new THREE.Vector3()
+        zipTarget: new THREE.Vector3(),
+        canDoubleJump: true,
+        isFlipping: false,
+        flipProgress: 0
     };
 
-    // --- 5. 조작 (마우스 드래그 & 클릭 & 키보드) ---
+    // --- 5. 조작 및 더블 스페이스 감지 ---
     let yaw = 0;
     let pitch = 0.2;
     let isDragging = false;
@@ -275,7 +306,57 @@ game_html = """
     });
 
     const keys = {};
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
+    let lastSpaceTime = 0;
+    const stuntAlert = document.getElementById('stunt-alert');
+    let alertTimeout = null;
+
+    function triggerStuntAlert() {
+        stuntAlert.classList.add('show');
+        if (alertTimeout) clearTimeout(alertTimeout);
+        alertTimeout = setTimeout(() => {
+            stuntAlert.classList.remove('show');
+        }, 800);
+    }
+
+    window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+
+        // 스페이스바 더블 탭 로직 (더블 클릭)
+        if (e.code === 'Space') {
+            const now = performance.now();
+            const timeDiff = now - lastSpaceTime;
+
+            if (player.isGrounded) {
+                // 바닥에서의 1차 점프
+                player.vel.y = 20.0;
+                player.isGrounded = false;
+                player.canDoubleJump = true;
+            } else {
+                // 공중 상태
+                if (player.isWebZipping) {
+                    // 웹집 중에 스페이스 누르면 탄력 도약
+                    player.isWebZipping = false;
+                    webLine.visible = false;
+                    player.vel.y = Math.max(player.vel.y, 24.0);
+                    player.canDoubleJump = true;
+                } else if (timeDiff < 350 && player.canDoubleJump) {
+                    // 공중에서 더블 탭 성공 -> 360도 공중제비 & 슈퍼 점프!
+                    player.vel.y = 28.0; // 높은 도약
+                    
+                    // 전방으로도 탄력 가속 추가
+                    const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
+                    player.vel.add(forward.multiplyScalar(15.0));
+
+                    player.canDoubleJump = false;
+                    player.isFlipping = true;
+                    player.flipProgress = 0;
+                    triggerStuntAlert();
+                }
+            }
+            lastSpaceTime = now;
+        }
+    });
+
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
     container.addEventListener('mousedown', (e) => {
@@ -297,7 +378,7 @@ game_html = """
         pitch = Math.max(-0.4, Math.min(1.2, pitch + dy * 0.005));
     });
 
-    // 드래그가 아닌 단순 클릭 시 해당 건물로 거미줄 발사(Web-Zip)
+    // 건물 클릭 시 웹집
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -306,7 +387,7 @@ game_html = """
         isDragging = false;
 
         const moveDist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
-        if (moveDist < 6) { // 마우스를 크게 움직이지 않은 순수 클릭
+        if (moveDist < 6) {
             const rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -319,6 +400,7 @@ game_html = """
                 player.isWebZipping = true;
                 player.zipTarget.copy(hits[0].point);
                 webLine.visible = true;
+                player.canDoubleJump = true; // 웹집 탑승 시 더블점프 리셋
             }
         }
     });
@@ -336,7 +418,7 @@ game_html = """
         const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
         const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
 
-        // W, A, S, D 키 입력 (지상 및 공중 체공 중 모두 반영)
+        // W, A, S, D 키 입력
         const move = new THREE.Vector3();
         if (keys['KeyW'] || keys['ArrowUp']) move.add(forward);
         if (keys['KeyS'] || keys['ArrowDown']) move.sub(forward);
@@ -345,25 +427,22 @@ game_html = """
         if (move.lengthSq() > 0) move.normalize();
 
         if (player.isWebZipping) {
-            // [웹집 모드]: 클릭한 건물로 날아가기
+            // [웹집 모드]
             const toTarget = new THREE.Vector3().subVectors(player.zipTarget, player.pos);
             const dist = toTarget.length();
 
-            if (dist < 4.5 || keys['Space']) {
-                // 도착하거나 스페이스바 누르면 거미줄 끊고 위로 도약
+            if (dist < 4.5) {
                 player.isWebZipping = false;
                 webLine.visible = false;
                 player.vel.add(toTarget.normalize().multiplyScalar(24));
                 player.vel.y = Math.max(player.vel.y, 22);
             } else {
-                const zipSpeed = 100.0;
+                const zipSpeed = 105.0;
                 player.vel.copy(toTarget.normalize().multiplyScalar(zipSpeed));
 
-                // 웹집 중에도 A, D로 좌우 회피 조향 가능
                 if (keys['KeyA']) player.vel.add(right.clone().multiplyScalar(-15));
                 if (keys['KeyD']) player.vel.add(right.clone().multiplyScalar(15));
 
-                // 거미줄 선 업데이트
                 const pts = new Float32Array([
                     player.pos.x, player.pos.y + 0.8, player.pos.z,
                     player.zipTarget.x, player.zipTarget.y, player.zipTarget.z
@@ -371,8 +450,8 @@ game_html = """
                 webLine.geometry.setAttribute('position', new THREE.BufferAttribute(pts, 3));
             }
         } else {
-            // [자유 비행 / 점프 / 방향 조절]
-            const controlPower = player.isGrounded ? 55.0 : 42.0; // 점프 중에도 방향 조절 가능
+            // [자유 비행 & 점프 방향 제어]
+            const controlPower = player.isGrounded ? 55.0 : 42.0;
             player.vel.x += move.x * controlPower * delta;
             player.vel.z += move.z * controlPower * delta;
 
@@ -383,12 +462,19 @@ game_html = """
             const damp = player.isGrounded ? 6.0 : 1.2;
             player.vel.x *= Math.max(0, 1 - damp * delta);
             player.vel.z *= Math.max(0, 1 - damp * delta);
+        }
 
-            // 점프
-            if (keys['Space'] && player.isGrounded) {
-                player.vel.y = 20.0;
-                player.isGrounded = false;
+        // 공중제비 360도 회전 애니메이션 처리
+        if (player.isFlipping) {
+            player.flipProgress += delta * 12.0; // 회전 속도
+            flipMeshGroup.rotation.x = player.flipProgress;
+            if (player.flipProgress >= Math.PI * 2) {
+                player.flipProgress = 0;
+                flipMeshGroup.rotation.x = 0;
+                player.isFlipping = false;
             }
+        } else {
+            flipMeshGroup.rotation.x = 0;
         }
 
         // 위치 적용
@@ -399,6 +485,9 @@ game_html = """
             player.pos.y = 0.6;
             player.vel.y = 0;
             player.isGrounded = true;
+            player.canDoubleJump = true; // 바닥 착지 시 더블점프 쿨타임 복원
+            player.isFlipping = false;
+            flipMeshGroup.rotation.x = 0;
             if (player.isWebZipping) {
                 player.isWebZipping = false;
                 webLine.visible = false;
@@ -407,13 +496,13 @@ game_html = """
             player.isGrounded = false;
         }
 
-        // 스파이더맨 캐릭터 회전
+        // 캐릭터 진행 방향 회전
         playerGroup.position.copy(player.pos);
         if (player.vel.lengthSq() > 1.0) {
             playerGroup.rotation.y = Math.atan2(player.vel.x, player.vel.z);
         }
 
-        // 카메라 추적 (3인칭 숄더뷰)
+        // 3인칭 카메라 추적
         const camDist = 6.5;
         const camH = 2.5;
         camera.position.set(
@@ -430,12 +519,13 @@ game_html = """
                 ring.visible = false;
                 ringCount++;
                 ringScore.innerHTML = `${ringCount} <span>/ 10</span>`;
-                player.vel.y = Math.max(player.vel.y, 16);
+                player.vel.y = Math.max(player.vel.y, 18);
                 player.vel.add(forward.clone().multiplyScalar(22));
+                player.canDoubleJump = true; // 링 통과 시에도 추가 점프 활성화
             }
         });
 
-        // HUD 속도 표시
+        // 속도계 업데이트
         speedMeter.innerHTML = `${Math.round(player.vel.length() * 3.6)} <span>km/h</span>`;
 
         renderer.render(scene, camera);
