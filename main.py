@@ -14,7 +14,7 @@ st.set_page_config(
 st.markdown("""
 <style>
     .block-container {
-        padding: 1rem 1.5rem !important;
+        padding: 0.8rem 1.2rem !important;
         max-width: 100% !important;
     }
     header {visibility: hidden;}
@@ -25,9 +25,9 @@ st.markdown("""
 
 # 2. 탭 구성
 tab_game, tab_lab, tab_boss = st.tabs([
-    "🎮 3D 시티 웹집 어드벤처", 
+    "🎮 3D 시티 웹스윙 & 집 어드벤처", 
     "🧪 첨단 생체재료 역학 연구소 (거미줄 제작)", 
-    "⚔️ 빌런 보스전 (그린 고블린 배틀)"
+    "⚔️ 빌런 보스전 (그린 고블린 거미줄 포박 배틀)"
 ])
 
 # 세션 상태로 거미줄 물리 파라미터 보존
@@ -68,7 +68,7 @@ with tab_lab:
             max_value=12.0,
             value=6.5,
             step=0.5,
-            help="고분자 사슬 간 화학적 공유결합 밀도입니다. 고무 탄성 이론에 따라 탄성계수(Young's modulus)와 비행 견인 속도에 직접 비례합니다."
+            help="고분자 사슬 간 화학적 공유결합 밀도입니다. 영률(Young's modulus)과 비행 견인 속도에 비례합니다."
         )
 
         st.markdown("#### 2. 마이크로 노즐 사출 압력 (Chamber Pressure)")
@@ -78,13 +78,14 @@ with tab_lab:
             max_value=35.0,
             value=22.0,
             step=1.0,
-            help="웹슈터의 마이크로 플루이딕 노즐 내부 분사 압력입니다. 하겐-푸아죄유 법칙 및 베르누이 유체역학에 따라 거미줄의 최대 발사 사정거리를 결정합니다."
+            help="웹슈터의 마이크로 플루이딕 노즐 내부 분사 압력입니다. 거미줄 최대 사정거리를 결정합니다."
         )
 
         st.markdown("#### 3. 거미줄 광학 표면 물성")
         selected_color = st.color_picker("생체 형광 광학 색상 (Photoluminescence)", st.session_state.web_color)
         selected_thickness = st.slider("섬유 다발 가닥 수 / 직경 d (μm)", 1, 6, st.session_state.web_thickness)
 
+    # 물리 계산 엔진
     R_gas = 8.314
     Temp = 298.15
     youngs_modulus_gpa = (3.0 * (crosslink_density * 1e4) * R_gas * Temp) / 1e9
@@ -101,10 +102,10 @@ with tab_lab:
         st.subheader("📐 유도된 물리·역학적 지표 및 수식 모델")
 
         st.latex(r"E \approx 3 \rho_x R T \quad \implies \quad v_{\text{zip}} \propto \sqrt{\frac{E}{\rho_{\text{fiber}}}}")
-        st.caption("• **고무 탄성 이론(Affine Network Model)**: 가교 밀도($\\rho_x$)가 증가할수록 영률($E$)이 상승하여 비행 견인 속도($v_{\\text{zip}}$)가 비례하여 증가합니다.")
+        st.caption("• **고무 탄성 이론**: 가교 밀도($\\rho_x$)가 증가할수록 영률($E$)이 상승하여 비행 견인 속도($v_{\\text{zip}}$)가 비례하여 증가합니다.")
 
         st.latex(r"Q = \frac{\pi r^4 \Delta P}{8 \mu L}, \quad v_0 = \sqrt{\frac{2 \Delta P}{\rho_{\text{fluid}}}} \quad \implies \quad R_{\max} \propto \frac{v_0^2}{g}")
-        st.caption("• **하겐-푸아죄유(Hagen-Poiseuille) 유체역학**: 점성 유체($\\mu$)가 마이크로 방사 노즐을 통과할 때 형성되는 사출 압력차($\\Delta P$)가 초기 분사 속도($v_0$)를 결정하여 최대 사정거리($R_{\\max}$)를 도출합니다.")
+        st.caption("• **하겐-푸아죄유 유체역학**: 점성 유체($\\mu$)가 마이크로 방사 노즐을 통과할 때 형성되는 사출 압력차($\\Delta P$)로 최대 사정거리($R_{\\max}$)를 도출합니다.")
 
         st.markdown("---")
         m1, m2 = st.columns(2)
@@ -112,7 +113,7 @@ with tab_lab:
         m2.metric("노즐 초기 사출 유속 (v₀)", f"{v_exit:.1f} m/s", delta=f"{injection_pressure} MPa")
 
         m3, m4 = st.columns(2)
-        m3.metric("최종 웹집 추진력 (Speed)", f"{calculated_web_speed} km/h")
+        m3.metric("최종 웹 추진 속도 (Speed)", f"{calculated_web_speed} km/h")
         m4.metric("최종 유효 사정거리 (Max Range)", f"{calculated_web_range} m")
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -123,7 +124,7 @@ with tab_lab:
             st.session_state.web_thickness = selected_thickness
             st.success(f"생체역학 파라미터가 장착되었습니다! (탄성 견인 속도: {calculated_web_speed} km/h, 사정거리: {calculated_web_range} m)")
 
-# ==================== [TAB 1: 3D 게임 플레이 (기존 코드 100% 동일 유지)] ====================
+# ==================== [TAB 1: 3D 시티 게임 (순간이동 버그 완전 제거 & 자연스러운 가속 견인)] ====================
 with tab_game:
     current_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     current_web_speed = float(st.session_state.web_speed)
@@ -151,10 +152,9 @@ with tab_game:
             top: 0; 
             left: 0; 
             cursor: grab;
+            outline: none;
         }}
-        #canvas-container:active {{
-            cursor: grabbing;
-        }}
+        #canvas-container:active {{ cursor: grabbing; }}
         
         #hud {{
             position: absolute;
@@ -276,7 +276,7 @@ with tab_game:
 
     <div id="start-overlay">
         <h1>🕷️ SPIDER-MAN 3D CITY</h1>
-        <p>▶ 여기를 클릭해서 조작을 시작하세요</p>
+        <p>▶ 여기를 클릭해서 조작을 시작하세요 (순간이동 없는 부드러운 가속 스윙)</p>
     </div>
 
     <div id="hud">
@@ -297,14 +297,12 @@ with tab_game:
     <div id="stunt-alert">✨ ACROBATIC FLIP! ✨</div>
 
     <div id="controls-guide">
-        • <span class="key-badge">건물 클릭</span> 웹집 발사 (계산된 속도: {current_web_speed}km/h | 사거리: {current_web_range}m)<br>
-        • <span class="key-badge">드래그</span> 시점/카메라 360도 회전<br>
-        • <span class="key-badge">W</span> <span class="key-badge">A</span> <span class="key-badge">S</span> <span class="key-badge">D</span> 이동 및 <b>공중 방향 조절</b><br>
-        • <span class="key-badge">Space</span> 점프 | <span class="key-badge">Space 더블탭</span> <b>360도 공중제비 슈퍼점프</b><br>
-        • ⚠️ <b>건물 충돌 시스템 활성화 (벽 관통 불가)</b>
+        • <span class="key-badge">건물 클릭</span> <b>순간이동 없이 거미줄 탄성으로 쭉 당겨지며 비행!</b><br>
+        • <span class="key-badge">드래그</span> 시점 360도 회전 | <span class="key-badge">W,A,S,D</span> 공중 방향 조절<br>
+        • <span class="key-badge">Space</span> 점프 | <span class="key-badge">Space 더블탭</span> <b>360도 공중제비 슈퍼점프</b>
     </div>
 
-    <div id="canvas-container"></div>
+    <div id="canvas-container" tabindex="0"></div>
 
     <script>
         const WEB_COLOR = {current_web_color};
@@ -347,12 +345,7 @@ with tab_game:
         winTexture.wrapS = THREE.RepeatWrapping;
         winTexture.wrapT = THREE.RepeatWrapping;
 
-        const bldgMat = new THREE.MeshStandardMaterial({{
-            map: winTexture,
-            roughness: 0.35,
-            metalness: 0.3
-        }});
-
+        const bldgMat = new THREE.MeshStandardMaterial({{ map: winTexture, roughness: 0.35, metalness: 0.3 }});
         const roofMat = new THREE.MeshStandardMaterial({{ color: 0x334155, roughness: 0.8 }});
         const tankMat = new THREE.MeshStandardMaterial({{ color: 0x78350f, roughness: 0.6 }});
 
@@ -374,10 +367,8 @@ with tab_game:
                 buildings.push(bldg);
 
                 buildingColliders.push({{
-                    minX: posX - w/2 - 0.7,
-                    maxX: posX + w/2 + 0.7,
-                    minZ: posZ - d/2 - 0.7,
-                    maxZ: posZ + d/2 + 0.7,
+                    minX: posX - w/2 - 0.7, maxX: posX + w/2 + 0.7,
+                    minZ: posZ - d/2 - 0.7, maxZ: posZ + d/2 + 0.7,
                     topY: h
                 }});
 
@@ -430,15 +421,13 @@ with tab_game:
         legs.position.y = 0.35;
         flipMeshGroup.add(legs);
 
-        const webMat = new THREE.LineBasicMaterial({{ 
-            color: WEB_COLOR, 
-            linewidth: WEB_THICKNESS 
-        }});
+        const webMat = new THREE.LineBasicMaterial({{ color: WEB_COLOR, linewidth: WEB_THICKNESS }});
         const webGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
         const webLine = new THREE.Line(webGeo, webMat);
         webLine.visible = false;
         scene.add(webLine);
 
+        // 물리 객체 (순간이동 없는 탄성 가속도 제어)
         const player = {{
             pos: new THREE.Vector3(0, 25, 0),
             vel: new THREE.Vector3(),
@@ -453,16 +442,14 @@ with tab_game:
         let yaw = 0;
         let pitch = 0.2;
         let isDragging = false;
-        let startMouseX = 0;
-        let startMouseY = 0;
-        let clickStartX = 0;
-        let clickStartY = 0;
+        let startMouseX = 0, startMouseY = 0;
+        let clickStartX = 0, clickStartY = 0;
 
         const overlay = document.getElementById('start-overlay');
         overlay.addEventListener('click', () => {{
             overlay.style.opacity = '0';
             setTimeout(() => {{ overlay.style.display = 'none'; }}, 300);
-            window.focus();
+            container.focus();
         }});
 
         const keys = {{}};
@@ -494,9 +481,10 @@ with tab_game:
                     player.canDoubleJump = true;
                 }} else {{
                     if (player.isWebZipping) {{
+                        // 비행 중 거미줄 릴리즈 & 탄력 점프
                         player.isWebZipping = false;
                         webLine.visible = false;
-                        player.vel.y = Math.max(player.vel.y, 25.0);
+                        player.vel.y = Math.max(player.vel.y, 22.0);
                         player.canDoubleJump = true;
                     }} else if (diff < 350 && player.canDoubleJump) {{
                         player.vel.y = 28.0;
@@ -549,6 +537,7 @@ with tab_game:
                 const hits = raycaster.intersectObjects(buildings);
 
                 if (hits.length > 0 && hits[0].point.y > 4) {{
+                    // 순간이동 없이 거미줄 걸고 당기기 시작
                     player.isWebZipping = true;
                     player.zipTarget.copy(hits[0].point);
                     webLine.visible = true;
@@ -618,19 +607,24 @@ with tab_game:
             if (move.lengthSq() > 0) move.normalize();
 
             if (player.isWebZipping) {{
+                // [순간이동 없는 연속 탄성 가속도 모델]
                 const toTarget = new THREE.Vector3().subVectors(player.zipTarget, player.pos);
                 const dist = toTarget.length();
 
-                if (dist < 4.5) {{
+                if (dist < 4.0) {{
+                    // 목표 도착 시 부드러운 릴리즈 & 공중 상승
                     player.isWebZipping = false;
                     webLine.visible = false;
-                    player.vel.add(toTarget.normalize().multiplyScalar(24));
-                    player.vel.y = Math.max(player.vel.y, 22);
+                    player.vel.y = Math.max(player.vel.y, 20.0);
                 }} else {{
-                    player.vel.copy(toTarget.normalize().multiplyScalar(WEB_SPEED));
+                    // 목표 방향으로 탄성 가속도를 지속 누적하여 슉 날아가게 유도
+                    const pullDir = toTarget.normalize();
+                    const targetSpeed = Math.min(dist * 2.8, WEB_SPEED * 0.45);
+                    player.vel.lerp(pullDir.multiplyScalar(targetSpeed), delta * 5.0);
 
-                    if (keys['KeyA']) player.vel.add(right.clone().multiplyScalar(-16));
-                    if (keys['KeyD']) player.vel.add(right.clone().multiplyScalar(16));
+                    // 좌우 미세 회피 조향
+                    if (keys['KeyA']) player.vel.add(right.clone().multiplyScalar(-10));
+                    if (keys['KeyD']) player.vel.add(right.clone().multiplyScalar(10));
 
                     const pts = new Float32Array([
                         player.pos.x, player.pos.y + 0.8, player.pos.z,
@@ -719,7 +713,7 @@ with tab_game:
 
     components.html(game_html, height=840, scrolling=False)
 
-# ==================== [TAB 3: 전면 개편된 보스전: 벽타기 & 거미줄 구속 & 웹블로섬 궁극기] ====================
+# ==================== [TAB 3: 전면 개편된 보스전: 느려진 고블린 + 확실한 거미줄 발사 & 포박 시스템] ====================
 with tab_boss:
     boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     boss_web_speed = float(st.session_state.web_speed)
@@ -748,18 +742,23 @@ with tab_boss:
             outline: none;
         }}
 
-        /* 보스 체력 & 구속 게이지 UI */
+        /* 중앙 상단 대형 HUD: 고블린 체력 & 거미줄 포박 게이지 */
         #boss-ui {{
             position: absolute;
-            top: 20px;
+            top: 15px;
             left: 50%;
             transform: translateX(-50%);
-            width: min(650px, 90vw);
+            width: min(680px, 92vw);
             z-index: 10;
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 6px;
             pointer-events: none;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 12px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         }}
         .boss-header {{
             display: flex;
@@ -767,17 +766,14 @@ with tab_boss:
             color: #ef4444;
             font-weight: 900;
             letter-spacing: 1.5px;
-            font-size: 14px;
-            text-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+            font-size: 15px;
         }}
         .boss-hp-bg {{
             width: 100%;
-            height: 18px;
-            background: rgba(15, 23, 42, 0.9);
-            border: 2px solid rgba(239, 68, 68, 0.6);
-            border-radius: 9px;
+            height: 16px;
+            background: #1e293b;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
         }}
         #boss-hp-bar {{
             width: 100%;
@@ -785,32 +781,42 @@ with tab_boss:
             background: linear-gradient(90deg, #dc2626, #f97316);
             transition: width 0.15s ease-out;
         }}
-        /* 거미줄 구속도 바 */
+        
+        /* 거미줄 포박 게이지 (눈에 잘 띄는 대형 바) */
+        .bind-header {{
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 800;
+            color: #38bdf8;
+            margin-top: 2px;
+        }}
         .boss-bind-bg {{
             width: 100%;
-            height: 8px;
-            background: #1e293b;
-            border-radius: 4px;
+            height: 14px;
+            background: #0f172a;
+            border-radius: 7px;
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid #0284c7;
         }}
         #boss-bind-bar {{
             width: 0%;
             height: 100%;
-            background: #38bdf8;
-            transition: width 0.1s ease;
+            background: linear-gradient(90deg, #38bdf8, #ffffff);
+            box-shadow: 0 0 10px #38bdf8;
+            transition: width 0.15s ease;
         }}
 
         /* 좌상단: 플레이어 체력 & 궁극기(ULTIMATE) 게이지 */
         #player-ui {{
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 15px;
+            left: 15px;
             z-index: 10;
-            background: rgba(15, 23, 42, 0.85);
+            background: rgba(15, 23, 42, 0.88);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
-            padding: 12px 18px;
+            padding: 12px 16px;
             color: #fff;
             pointer-events: none;
             display: flex;
@@ -818,9 +824,9 @@ with tab_boss:
             gap: 8px;
         }}
         .bar-label {{ font-size: 11px; font-weight: 700; color: #94a3b8; display: flex; justify-content: space-between; }}
-        .bar-bg {{ width: 170px; height: 10px; background: #1e293b; border-radius: 5px; overflow: hidden; }}
+        .bar-bg {{ width: 170px; height: 11px; background: #1e293b; border-radius: 5px; overflow: hidden; }}
         #player-hp-bar {{ width: 100%; height: 100%; background: #22c55e; transition: width 0.2s ease; }}
-        #ult-bar {{ width: 0%; height: 100%; background: linear-gradient(90deg, #06b6d4, #f59e0b); transition: width 0.15s ease; }}
+        #ult-bar {{ width: 0%; height: 100%; background: linear-gradient(90deg, #06b6d4, #facc15); transition: width 0.15s ease; }}
         #ult-ready-tag {{
             font-size: 11px;
             color: #facc15;
@@ -830,19 +836,21 @@ with tab_boss:
         }}
         @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
 
-        /* 중앙 알림 배너 (벽타기, 스턴, 궁극기) */
+        /* 중앙 알림 배너 (포박, 궁극기) */
         #action-banner {{
             position: absolute;
-            top: 85px;
+            top: 130px;
             left: 50%;
             transform: translateX(-50%) scale(0.85);
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 900;
             letter-spacing: 2px;
             opacity: 0;
             pointer-events: none;
             z-index: 20;
-            transition: all 0.2s ease;
+            text-align: center;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
         }}
         #action-banner.show {{
             opacity: 1;
@@ -890,11 +898,10 @@ with tab_boss:
             transition: opacity 0.15s ease;
         }}
 
-        /* 시작 모달 */
         #modal-screen {{
             position: absolute;
             inset: 0;
-            background: rgba(6, 8, 20, 0.9);
+            background: rgba(6, 8, 20, 0.92);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -904,7 +911,7 @@ with tab_boss:
             cursor: pointer;
         }}
         #modal-screen h1 {{
-            font-size: 36px;
+            font-size: 34px;
             color: #38bdf8;
             letter-spacing: 2px;
             margin-bottom: 12px;
@@ -923,12 +930,11 @@ with tab_boss:
     <body>
 
     <div id="hit-overlay"></div>
-
     <div id="action-banner"></div>
 
     <div id="modal-screen">
-        <h1 id="modal-title">⚔️ SPIDER-MAN VS GOBLIN</h1>
-        <p id="modal-desc">▶ 클릭하여 배틀 시작 (속도 대폭 강화 & 벽타기 & 궁극기 탑재)</p>
+        <h1 id="modal-title">⚔️ GREEN GOBLIN WEB-TIE BATTLE</h1>
+        <p id="modal-desc">▶ 화면을 클릭하여 배틀 시작 (거미줄 발사 즉각 반응 & 포박 시스템)</p>
     </div>
 
     <div id="player-ui">
@@ -945,20 +951,26 @@ with tab_boss:
         </div>
     </div>
 
+    <!-- 고블린 체력 및 실시간 거미줄 포박 게이지 -->
     <div id="boss-ui">
         <div class="boss-header">
             <span>😈 GREEN GOBLIN</span>
-            <span id="boss-hp-text">100%</span>
+            <span id="boss-hp-text">HP 100%</span>
         </div>
         <div class="boss-hp-bg"><div id="boss-hp-bar"></div></div>
+        
+        <div class="bind-header">
+            <span>🕸️ 거미줄 포박 진행도 (WEB BINDING)</span>
+            <span id="boss-bind-text">0%</span>
+        </div>
         <div class="boss-bind-bg"><div id="boss-bind-bar"></div></div>
     </div>
 
     <div id="boss-guide">
-        • <span class="badge">좌클릭</span> <b>거미줄 발사</b> (적중 시 대미지 + <b>거미줄로 묶음 Stun</b>)<br>
-        • <span class="ult-badge">Q 키 / 우클릭</span> <b>궁극기 [웹 블라섬]</b> 게이지 100% 시 360도 거미줄 난사 폭발!<br>
-        • <span class="badge">벽면 근처 W</span> <b>벽 타기 질주 (Wall Run / Climb)</b>로 순식간에 빌딩 등반!<br>
-        • <span class="badge">W</span> <span class="badge">A</span> <span class="badge">S</span> <span class="badge">D</span> 초고속 기동 | <span class="badge">Space</span> 회피 도약
+        • <span class="badge">마우스 좌클릭</span> <b>거미줄 발사</b> (4번 맞추면 거미줄로 칭칭 감아 <b>바닥에 추락 & 5초 포박 기절!</b>)<br>
+        • <span class="ult-badge">Q 키 / 마우스 우클릭</span> <b>궁극기 [웹 블라섬]</b> 게이지 100% 시 360도 전방위 거미줄 폭풍!<br>
+        • <span class="badge">벽면 근처 W</span> <b>벽 타기 질주 (Wall Run)</b>로 높은 타워 등반<br>
+        • <span class="badge">W</span> <span class="badge">A</span> <span class="badge">S</span> <span class="badge">D</span> 질주 기동 | <span class="badge">Space</span> 점프 회피
     </div>
 
     <div id="boss-canvas" tabindex="0"></div>
@@ -983,22 +995,21 @@ with tab_boss:
         dirLight.position.set(50, 120, 60);
         scene.add(dirLight);
 
-        // --- 1. 아레나 & 벽타기 가능한 빌딩 기둥 배치 ---
+        // 아레나 바닥
         const arena = new THREE.Mesh(
-            new THREE.BoxGeometry(130, 4, 130),
+            new THREE.BoxGeometry(140, 4, 140),
             new THREE.MeshStandardMaterial({{ color: 0x1e293b, roughness: 0.6 }})
         );
         arena.position.y = -2;
         scene.add(arena);
 
+        // 등반용 빌딩 타워 4채
         const climbBuildings = [];
         const towerGeo = new THREE.BoxGeometry(18, 55, 18);
         const towerMat = new THREE.MeshStandardMaterial({{ color: 0x334155, roughness: 0.4 }});
-
-        // 경기장 사방에 4개의 거대한 등반용 타워 배치
         const towerPositions = [
-            [-32, 27.5, -32], [32, 27.5, -32],
-            [-32, 27.5, 32],  [32, 27.5, 32]
+            [-35, 27.5, -35], [35, 27.5, -35],
+            [-35, 27.5, 35],  [35, 27.5, 35]
         ];
         towerPositions.forEach(pos => {{
             const tower = new THREE.Mesh(towerGeo, towerMat);
@@ -1011,7 +1022,7 @@ with tab_boss:
             }});
         }});
 
-        // --- 2. 플레이어 (스파이더맨 아바타) ---
+        // 플레이어 (스파이더맨)
         const playerGroup = new THREE.Group();
         scene.add(playerGroup);
 
@@ -1031,13 +1042,13 @@ with tab_boss:
             pos: new THREE.Vector3(0, 0, 30),
             vel: new THREE.Vector3(),
             hp: 100,
-            ultGauge: 0, // 0 ~ 100
+            ultGauge: 0,
             isGrounded: true,
             isWallClimbing: false,
             invulnerableTime: 2.0
         }};
 
-        // --- 3. 그린 고블린 & 글라이더 (거미줄 묶임 효과 포함) ---
+        // 고블린 보스 모델링 & 거미줄 포박 그물망
         const goblinGroup = new THREE.Group();
         scene.add(goblinGroup);
 
@@ -1057,36 +1068,46 @@ with tab_boss:
         gobHead.position.y = 2.0;
         goblinGroup.add(gobHead);
 
-        // 묶였을 때 나타나는 하얀 거미줄 고치 (Web Cocoon)
-        const cocoonMat = new THREE.MeshBasicMaterial({{ color: 0xffffff, wireframe: true, transparent: true, opacity: 0 }});
-        const cocoon = new THREE.Mesh(new THREE.SphereGeometry(2.8, 16, 16), cocoonMat);
-        goblinGroup.add(cocoon);
+        // 맞을 때마다 몸에 칭칭 감기는 실제 3D 거미줄 와이어 메시
+        const webTrapGroup = new THREE.Group();
+        const webLineMat = new THREE.LineBasicMaterial({{ color: 0xffffff, linewidth: 3 }});
+        for (let i = 0; i < 12; i++) {{
+            const p1 = new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3 + 1, (Math.random()-0.5)*3);
+            const p2 = new THREE.Vector3((Math.random()-0.5)*3, (Math.random()-0.5)*3 + 1, (Math.random()-0.5)*3);
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+            const line = new THREE.Line(lineGeo, webLineMat);
+            webTrapGroup.add(line);
+        }}
+        webTrapGroup.visible = false;
+        goblinGroup.add(webTrapGroup);
 
+        // 차분하고 안정된 속도로 선회하도록 파라미터 대폭 완화
         const boss = {{
-            pos: new THREE.Vector3(0, 16, -20),
+            pos: new THREE.Vector3(0, 12, -18),
+            targetPos: new THREE.Vector3(0, 12, -18),
             hp: 100,
-            bindMeter: 0,      // 0 ~ 100
-            stunTimer: 0,      // 거미줄 묶임 상태 지속시간
+            bindMeter: 0,
+            stunTimer: 0,
             angle: 0,
             attackTimer: 0
         }};
         goblinGroup.position.copy(boss.pos);
 
-        // 투사체 배열
+        // 투사체
         const webBullets = [];
-        const webBulletGeo = new THREE.SphereGeometry(0.5, 8, 8);
-        const webBulletMat = new THREE.MeshBasicMaterial({{ color: WEB_COLOR }});
+        const webBulletGeo = new THREE.SphereGeometry(0.65, 12, 12);
+        const webBulletMat = new THREE.MeshBasicMaterial({{ color: 0xffffff }}); // 하얀 거미줄 덩어리
 
         const pumpkinBombs = [];
         const bombGeo = new THREE.SphereGeometry(0.65, 12, 12);
         const bombMat = new THREE.MeshStandardMaterial({{ color: 0xea580c, emissive: 0xf97316, emissiveIntensity: 0.8 }});
 
-        // 조작 & UI 제어
+        // 조작 & UI
         let isStarted = false;
         let isGameOver = false;
         let yaw = 0;
         let pitch = 0.15;
-        let isDragging = false;
+        let isRightDragging = false;
         let startX = 0, startY = 0;
         const keys = {{}};
 
@@ -1096,6 +1117,7 @@ with tab_boss:
         const bossHpBar = document.getElementById('boss-hp-bar');
         const bossHpText = document.getElementById('boss-hp-text');
         const bossBindBar = document.getElementById('boss-bind-bar');
+        const bossBindText = document.getElementById('boss-bind-text');
         const playerHpBar = document.getElementById('player-hp-bar');
         const playerHpText = document.getElementById('player-hp-text');
         const ultBar = document.getElementById('ult-bar');
@@ -1107,7 +1129,7 @@ with tab_boss:
             actionBanner.innerText = text;
             actionBanner.style.color = color;
             actionBanner.classList.add('show');
-            setTimeout(() => {{ actionBanner.classList.remove('show'); }}, 1000);
+            setTimeout(() => {{ actionBanner.classList.remove('show'); }}, 1200);
         }}
 
         function ensureFocus() {{
@@ -1124,14 +1146,18 @@ with tab_boss:
             player.pos.set(0, 0, 30);
             player.vel.set(0, 0, 0);
             player.invulnerableTime = 2.0;
-            boss.pos.set(0, 16, -20);
+            boss.pos.set(0, 12, -18);
+            webTrapGroup.visible = false;
+
             webBullets.forEach(b => scene.remove(b.mesh));
             pumpkinBombs.forEach(b => scene.remove(b.mesh));
             webBullets.length = 0;
             pumpkinBombs.length = 0;
+
             bossHpBar.style.width = '100%';
-            bossHpText.innerText = '100%';
+            bossHpText.innerText = 'HP 100%';
             bossBindBar.style.width = '0%';
+            bossBindText.innerText = '0%';
             playerHpBar.style.width = '100%';
             playerHpText.innerText = '100%';
             ultBar.style.width = '0%';
@@ -1144,34 +1170,41 @@ with tab_boss:
 
         container.addEventListener('click', ensureFocus);
 
-        // 키보드 & 마우스 이벤트
+        // 키보드 이벤트
         window.addEventListener('keydown', (e) => {{
             keys[e.code] = true;
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {{
                 e.preventDefault();
             }}
-            // 궁극기 발사 키 (Q 키)
             if (e.code === 'KeyQ') {{
                 fireUltimate();
             }}
         }});
         window.addEventListener('keyup', (e) => {{ keys[e.code] = false; }});
 
+        // 마우스 드래그(시점) & 마우스 좌클릭(거미줄 무조건 즉시 발사)
         container.addEventListener('mousedown', (e) => {{
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
             ensureFocus();
-            // 우클릭으로도 궁극기 발사 지원
-            if (e.button === 2) {{
+
+            if (e.button === 0) {{
+                // 좌클릭: 즉시 거미줄 발사! (드래그 여부 상관없이 100% 발사 보장)
+                if (isStarted && !isGameOver) {{
+                    shootWebBullet();
+                }}
+            }} else if (e.button === 2) {{
+                // 우클릭: 궁극기 발사
                 fireUltimate();
             }}
+
+            isRightDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
         }});
 
         window.addEventListener('contextmenu', (e) => e.preventDefault());
 
         window.addEventListener('mousemove', (e) => {{
-            if (!isDragging) return;
+            if (!isRightDragging) return;
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
             startX = e.clientX;
@@ -1180,12 +1213,12 @@ with tab_boss:
             pitch = Math.max(-0.4, Math.min(0.9, pitch + dy * 0.005));
         }});
 
-        // 일반 거미줄 발사 (좌클릭)
-        window.addEventListener('mouseup', (e) => {{
-            if (!isDragging) return;
-            isDragging = false;
-            if (!isStarted || isGameOver || e.button !== 0) return;
+        window.addEventListener('mouseup', () => {{
+            isRightDragging = false;
+        }});
 
+        // 거미줄 발사 함수
+        function shootWebBullet() {{
             const shootDir = new THREE.Vector3(
                 -Math.sin(yaw) * Math.cos(pitch),
                 Math.sin(pitch),
@@ -1198,12 +1231,12 @@ with tab_boss:
 
             webBullets.push({{
                 mesh: bullet,
-                vel: shootDir.multiplyScalar(WEB_SPEED * 1.1),
-                life: 3.0
+                vel: shootDir.multiplyScalar(130.0), // 시원하고 빠른 탄속
+                life: 2.5
             }});
-        }});
+        }}
 
-        // --- 궁극기: 360도 웹 블라섬 (Web Blossom) ---
+        // 궁극기: 웹 블라섬
         function fireUltimate() {{
             if (!isStarted || isGameOver || player.ultGauge < 100) return;
             player.ultGauge = 0;
@@ -1211,12 +1244,10 @@ with tab_boss:
             ultReadyTag.style.display = 'none';
 
             showBanner("💥 WEB BLOSSOM ULTIMATE! 💥", "#facc15");
-
-            // 공중으로 크게 솟구친 후 20발의 전방위 거미줄 폭풍 발사
             player.vel.y = 22.0;
 
-            for (let i = 0; i < 20; i++) {{
-                const angle = (i / 20) * Math.PI * 2;
+            for (let i = 0; i < 24; i++) {{
+                const angle = (i / 24) * Math.PI * 2;
                 const dir = new THREE.Vector3(Math.cos(angle), (Math.random()-0.3)*0.8, Math.sin(angle)).normalize();
                 const bullet = new THREE.Mesh(webBulletGeo, new THREE.MeshBasicMaterial({{ color: 0x38bdf8 }}));
                 bullet.position.set(player.pos.x, player.pos.y + 1.5, player.pos.z);
@@ -1224,7 +1255,7 @@ with tab_boss:
 
                 webBullets.push({{
                     mesh: bullet,
-                    vel: dir.multiplyScalar(95.0),
+                    vel: dir.multiplyScalar(105.0),
                     life: 3.5,
                     isUlt: true
                 }});
@@ -1236,22 +1267,18 @@ with tab_boss:
             setTimeout(() => {{ hitOverlay.style.opacity = '0'; }}, 180);
         }}
 
-        // --- 벽타기 검사 로직 ---
-        function checkWallClimb(moveVector, delta) {{
+        function checkWallClimb(delta) {{
             player.isWallClimbing = false;
             for (let t of climbBuildings) {{
-                // 건물 벽면 2m 이내에 근접해 있는가?
                 const isNearX = (player.pos.x >= t.minX - 1.8 && player.pos.x <= t.maxX + 1.8);
                 const isNearZ = (player.pos.z >= t.minZ - 1.8 && player.pos.z <= t.maxZ + 1.8);
                 
                 if (isNearX && isNearZ && player.pos.y < t.topY) {{
-                    // 벽 쪽으로 W 키를 누르고 있거나 점프 중일 때 수직 벽타기 발동!
                     if (keys['KeyW'] || keys['Space'] || keys['ArrowUp']) {{
                         player.isWallClimbing = true;
-                        player.vel.y = 32.0; // 빠른 속도로 벽을 수직 질주
+                        player.vel.y = 34.0; // 빠른 수직 벽등반
                         player.vel.x *= 0.3;
                         player.vel.z *= 0.3;
-                        showBanner("🧗 WALL RUN CLIMB!", "#38bdf8");
                         return;
                     }}
                 }}
@@ -1274,7 +1301,7 @@ with tab_boss:
             const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
             const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
 
-            // 1) 플레이어 초고속 이동 (스피드 대폭 향상: 95.0)
+            // 1) 플레이어 초고속 이동
             const move = new THREE.Vector3();
             if (keys['KeyW'] || keys['ArrowUp']) move.add(forward);
             if (keys['KeyS'] || keys['ArrowDown']) move.sub(forward);
@@ -1287,10 +1314,8 @@ with tab_boss:
                 player.vel.z += move.z * 95.0 * delta;
             }}
 
-            // 벽 타기 체크
-            checkWallClimb(move, delta);
+            checkWallClimb(delta);
 
-            // 벽 타는 중이 아닐 때만 일반 중력 적용
             if (!player.isWallClimbing) {{
                 player.vel.y -= 38.0 * delta;
             }}
@@ -1299,7 +1324,6 @@ with tab_boss:
             player.vel.x *= Math.max(0, 1 - damp * delta);
             player.vel.z *= Math.max(0, 1 - damp * delta);
 
-            // 점프
             if (keys['Space'] && player.isGrounded) {{
                 player.vel.y = 22.0;
                 player.isGrounded = false;
@@ -1307,36 +1331,42 @@ with tab_boss:
 
             player.pos.addScaledVector(player.vel, delta);
 
-            // 바닥 착지
             if (player.pos.y <= 0) {{
                 player.pos.y = 0;
                 player.vel.y = 0;
                 player.isGrounded = true;
             }}
-            player.pos.x = Math.max(-58, Math.min(58, player.pos.x));
-            player.pos.z = Math.max(-58, Math.min(58, player.pos.z));
+            player.pos.x = Math.max(-62, Math.min(62, player.pos.x));
+            player.pos.z = Math.max(-62, Math.min(62, player.pos.z));
             playerGroup.position.copy(player.pos);
 
-            // 2) 고블린 보스 AI (거미줄 묶임 상태 판정)
+            // 2) 고블린 보스 AI (침착한 원형 선회 & 거미줄 포박 기절)
             if (boss.stunTimer > 0) {{
-                // [거미줄에 완전히 묶여서 스턴 상태]
+                // [포박 상태]: 바닥으로 곤두박질치며 5초간 기절
                 boss.stunTimer -= delta;
-                cocoonMat.opacity = Math.min(0.8, boss.stunTimer / 1.5);
-                // 스턴 중에는 움직이거나 폭탄을 쏘지 못하고 흔들리기만 함
-                goblinGroup.rotation.z = Math.sin(clock.getElapsedTime() * 15) * 0.15;
+                boss.pos.y = Math.max(1.0, boss.pos.y - 18.0 * delta); // 바닥으로 추락
+                webTrapGroup.visible = true; // 거미줄로 칭칭 감긴 모습
+                goblinGroup.rotation.z = Math.sin(clock.getElapsedTime() * 10) * 0.1;
+                goblinGroup.position.copy(boss.pos);
+
+                if (boss.stunTimer <= 0) {{
+                    webTrapGroup.visible = false;
+                    boss.bindMeter = 0;
+                    bossBindBar.style.width = '0%';
+                    bossBindText.innerText = '0%';
+                }}
             }} else {{
-                // 정상 기동 상태
-                cocoonMat.opacity = boss.bindMeter / 140.0;
-                boss.angle += delta * 1.2;
-                boss.pos.x = Math.sin(boss.angle) * 34;
-                boss.pos.z = Math.cos(boss.angle * 0.7) * 28 - 6;
-                boss.pos.y = 15 + Math.sin(boss.angle * 2.0) * 4.5;
+                // 정상 비행 상태 (속도를 0.45로 대폭 낮춰 조준이 편함)
+                boss.angle += delta * 0.45;
+                boss.pos.x = Math.sin(boss.angle) * 26;
+                boss.pos.z = Math.cos(boss.angle) * 22 - 6;
+                boss.pos.y = 11 + Math.sin(boss.angle * 1.5) * 2.5;
                 goblinGroup.position.copy(boss.pos);
                 goblinGroup.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
 
-                // 공격 폭탄 투척
+                // 느리고 피하기 쉬운 폭탄 투척 (3초 간격)
                 boss.attackTimer += delta;
-                if (boss.attackTimer > 2.0) {{
+                if (boss.attackTimer > 3.0) {{
                     boss.attackTimer = 0;
                     const bomb = new THREE.Mesh(bombGeo, bombMat);
                     bomb.position.copy(boss.pos);
@@ -1345,38 +1375,38 @@ with tab_boss:
                     const toPlayer = new THREE.Vector3().subVectors(player.pos, boss.pos).normalize();
                     pumpkinBombs.push({{
                         mesh: bomb,
-                        vel: toPlayer.multiplyScalar(28.0),
-                        life: 5.0
+                        vel: toPlayer.multiplyScalar(22.0),
+                        life: 6.0
                     }});
                 }}
             }}
 
-            // 3) 거미줄 투사체 업데이트 & 보스 피격 / 구속 판정
+            // 3) 거미줄 투사체 적중 판정 & 거미줄 포박 게이지 누적
             for (let i = webBullets.length - 1; i >= 0; i--) {{
                 const b = webBullets[i];
                 b.mesh.position.addScaledVector(b.vel, delta);
                 b.life -= delta;
 
-                if (b.mesh.position.distanceTo(boss.pos) < 3.5) {{
+                if (b.mesh.position.distanceTo(boss.pos) < 3.8) {{
                     // 거미줄 명중!
-                    const dmg = b.isUlt ? 35 : 8;
+                    const dmg = b.isUlt ? 30 : 10;
                     boss.hp = Math.max(0, boss.hp - dmg);
                     bossHpBar.style.width = boss.hp + '%';
-                    bossHpText.innerText = boss.hp + '%';
+                    bossHpText.innerText = 'HP ' + boss.hp + '%';
 
-                    // 거미줄 구속 수치 증가
-                    boss.bindMeter += b.isUlt ? 60 : 25;
-                    bossBindBar.style.width = Math.min(100, boss.bindMeter) + '%';
+                    // 거미줄 포박 게이지 25%씩 누적 (4번 맞추면 100% 포박)
+                    boss.bindMeter = Math.min(100, boss.bindMeter + (b.isUlt ? 60 : 25));
+                    bossBindBar.style.width = boss.bindMeter + '%';
+                    bossBindText.innerText = boss.bindMeter + '%';
 
-                    // 구속 게이지가 100에 도달하면 3.5초간 완전 스턴!
+                    // 100% 도달 시 즉시 추락 & 5초 포박 기절 발동!
                     if (boss.bindMeter >= 100 && boss.stunTimer <= 0) {{
-                        boss.stunTimer = 3.5;
-                        boss.bindMeter = 0;
-                        showBanner("🕸️ GOBLIN WEB-BOUND! (STUNNED) 🕸️", "#38bdf8");
+                        boss.stunTimer = 5.0; // 5초간 무방비 포박 기절
+                        showBanner("🕸️ 고블린 완전 포박! 5초간 무방비 기절! 🕸️", "#38bdf8");
                     }}
 
                     // 플레이어 궁극기 게이지 충전
-                    player.ultGauge = Math.min(100, player.ultGauge + 15);
+                    player.ultGauge = Math.min(100, player.ultGauge + 20);
                     ultBar.style.width = player.ultGauge + '%';
                     if (player.ultGauge >= 100) ultReadyTag.style.display = 'inline';
 
@@ -1387,7 +1417,7 @@ with tab_boss:
                         isGameOver = true;
                         modalTitle.innerText = "🏆 VICTORY!";
                         modalTitle.style.color = "#22c55e";
-                        modalDesc.innerText = "거미줄로 그린 고블린을 제압했습니다! 다시 도전하려면 클릭하세요.";
+                        modalDesc.innerText = "그린 고블린을 거미줄로 완전히 제압했습니다! 다시 도전하려면 클릭하세요.";
                         modalScreen.style.display = 'flex';
                     }}
                     continue;
@@ -1399,7 +1429,7 @@ with tab_boss:
                 }}
             }}
 
-            // 4) 호박 폭탄 업데이트 & 플레이어 피격
+            // 4) 폭탄 판정
             for (let i = pumpkinBombs.length - 1; i >= 0; i--) {{
                 const pb = pumpkinBombs[i];
                 pb.mesh.position.addScaledVector(pb.vel, delta);
@@ -1407,7 +1437,7 @@ with tab_boss:
 
                 if (pb.mesh.position.distanceTo(player.pos) < 2.0) {{
                     if (player.invulnerableTime <= 0) {{
-                        player.hp = Math.max(0, player.hp - 20);
+                        player.hp = Math.max(0, player.hp - 15);
                         playerHpBar.style.width = player.hp + '%';
                         playerHpText.innerText = player.hp + '%';
                         triggerPlayerHit();
