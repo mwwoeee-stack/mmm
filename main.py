@@ -4,7 +4,7 @@ import math
 
 # 1. 스트림릿 와이드 모드 설정
 st.set_page_config(
-    page_title="Spider-Man Biomechanics Lab & Boss Battle",
+    page_title="Spider-Man Biomechanics Lab & Physics Flight Report",
     page_icon="🕷️",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -25,12 +25,12 @@ st.markdown("""
 
 # 2. 탭 구성
 tab_game, tab_lab, tab_boss = st.tabs([
-    "🎮 3D 시티 웹스윙 & 집 어드벤처", 
+    "🎮 3D 시티 웹스윙 & 물리 데이터 로거", 
     "🧪 첨단 생체재료 역학 연구소 (거미줄 제작)", 
     "⚔️ 빌런 보스전 (그린 고블린 거미줄 포박 배틀)"
 ])
 
-# 세션 상태로 거미줄 물리 파라미터 보존
+# 세션 상태 보존
 if "web_color" not in st.session_state:
     st.session_state.web_color = "#38bdf8"
 if "web_speed" not in st.session_state:
@@ -49,7 +49,7 @@ with tab_lab:
     col_ctrl, col_physics = st.columns([1.1, 1.2])
 
     with col_ctrl:
-        st.subheader("⚙️ 고분자 나노구조 및 사출 공학 제어")
+        st.subheader("⚙️️ 고분자 나노구조 및 사출 공학 제어")
 
         fluid_base = st.selectbox(
             "기반 생체 복합 폴리머 기질 (Polymer Matrix)",
@@ -85,7 +85,6 @@ with tab_lab:
         selected_color = st.color_picker("생체 형광 광학 색상 (Photoluminescence)", st.session_state.web_color)
         selected_thickness = st.slider("섬유 다발 가닥 수 / 직경 d (μm)", 1, 6, st.session_state.web_thickness)
 
-    # 물리 계산 엔진
     R_gas = 8.314
     Temp = 298.15
     youngs_modulus_gpa = (3.0 * (crosslink_density * 1e4) * R_gas * Temp) / 1e9
@@ -102,10 +101,10 @@ with tab_lab:
         st.subheader("📐 유도된 물리·역학적 지표 및 수식 모델")
 
         st.latex(r"E \approx 3 \rho_x R T \quad \implies \quad v_{\text{zip}} \propto \sqrt{\frac{E}{\rho_{\text{fiber}}}}")
-        st.caption("• **고무 탄성 이론**: 가교 밀도($\\rho_x$)가 증가할수록 영률($E$)이 상승하여 비행 견인 속도($v_{\\text{zip}}$)가 비례하여 증가합니다.")
+        st.caption("• **고무 탄성 이론**: 가교 밀도가 증가할수록 영률이 상승하여 비행 추진 속도가 증가합니다.")
 
         st.latex(r"Q = \frac{\pi r^4 \Delta P}{8 \mu L}, \quad v_0 = \sqrt{\frac{2 \Delta P}{\rho_{\text{fluid}}}} \quad \implies \quad R_{\max} \propto \frac{v_0^2}{g}")
-        st.caption("• **하겐-푸아죄유 유체역학**: 점성 유체($\\mu$)가 마이크로 방사 노즐을 통과할 때 형성되는 사출 압력차($\\Delta P$)로 최대 사정거리($R_{\\max}$)를 도출합니다.")
+        st.caption("• **베르누이 및 사출 동역학**: 노즐 압력차로 방사 속도 및 최대 사정거리를 도출합니다.")
 
         st.markdown("---")
         m1, m2 = st.columns(2)
@@ -124,7 +123,7 @@ with tab_lab:
             st.session_state.web_thickness = selected_thickness
             st.success(f"생체역학 파라미터가 장착되었습니다! (탄성 견인 속도: {calculated_web_speed} km/h, 사정거리: {calculated_web_range} m)")
 
-# ==================== [TAB 1: 3D 시티 게임 (순간이동 버그 완전 제거 & 자연스러운 가속 견인)] ====================
+# ==================== [TAB 1: 3D 시티 게임 (실시간 물리 데이터 계측 & 리포트 생성)] ====================
 with tab_game:
     current_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     current_web_speed = float(st.session_state.web_speed)
@@ -181,15 +180,36 @@ with tab_game:
             font-weight: 700;
         }}
         .hud-val {{
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 900;
             color: #38bdf8;
         }}
         .hud-val span {{ font-size: 11px; color: #64748b; font-weight: 600; }}
 
+        #end-game-btn {{
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 20;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 800;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            transition: transform 0.15s ease, background 0.2s;
+        }}
+        #end-game-btn:hover {{
+            transform: scale(1.05);
+            background: linear-gradient(135deg, #f87171, #ef4444);
+        }}
+
         #stunt-alert {{
             position: absolute;
-            top: 70px;
+            top: 75px;
             left: 50%;
             transform: translateX(-50%) scale(0.8);
             color: #facc15;
@@ -240,33 +260,71 @@ with tab_game:
             color: #38bdf8;
         }}
 
-        #start-overlay {{
+        /* 오버레이 (시작 및 결과창) */
+        .overlay-screen {{
             position: absolute;
             inset: 0;
-            background: rgba(11, 14, 20, 0.85);
+            background: rgba(11, 14, 20, 0.9);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             color: #fff;
             z-index: 100;
-            cursor: pointer;
             transition: opacity 0.3s ease;
         }}
-        #start-overlay h1 {{ 
-            font-size: 32px; 
-            font-weight: 900; 
-            margin-bottom: 8px; 
-            color: #ef4444; 
-            letter-spacing: 1px; 
+        
+        /* 물리 분석 리포트 모달 */
+        #report-modal {{
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #38bdf8;
+            border-radius: 16px;
+            padding: 24px 32px;
+            width: min(640px, 92vw);
+            box-shadow: 0 10px 40px rgba(56, 189, 248, 0.3);
+            text-align: center;
         }}
-        #start-overlay p {{ 
-            font-size: 14px; 
-            color: #cbd5e1; 
-            background: rgba(255, 255, 255, 0.1); 
-            padding: 8px 18px; 
-            border-radius: 20px;
+        .report-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin: 20px 0;
+            text-align: left;
         }}
+        .report-card {{
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px 16px;
+        }}
+        .report-label {{
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }}
+        .report-value {{
+            font-size: 20px;
+            font-weight: 900;
+            color: #38bdf8;
+        }}
+        .report-formula {{
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 2px;
+        }}
+        .restart-btn {{
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: background 0.2s;
+        }}
+        .restart-btn:hover {{ background: #0369a1; }}
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     </head>
@@ -274,32 +332,72 @@ with tab_game:
 
     <div id="hit-vignette"></div>
 
-    <div id="start-overlay">
-        <h1>🕷️ SPIDER-MAN 3D CITY</h1>
-        <p>▶ 여기를 클릭해서 조작을 시작하세요 (순간이동 없는 부드러운 가속 스윙)</p>
+    <div id="start-overlay" class="overlay-screen" style="cursor: pointer;">
+        <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 8px; color: #ef4444; letter-spacing: 1px;">🕷️ SPIDER-MAN 3D CITY</h1>
+        <p style="font-size: 14px; color: #cbd5e1; background: rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 20px;">▶ 클릭하여 비행 시작 (종료 시 물리 분석 리포트 제공)</p>
     </div>
+
+    <!-- 비행 종료 및 물리 리포트 오버레이 -->
+    <div id="report-overlay" class="overlay-screen" style="display: none;">
+        <div id="report-modal">
+            <h2 style="font-size: 24px; font-weight: 900; color: #f8fafc; letter-spacing: 1px;">📊 비행 역학 분석 리포트</h2>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">기준 질량: 스파이더맨 m = 65.0 kg | 유효 충돌 시간: Δt = 0.05 s</p>
+            
+            <div class="report-grid">
+                <div class="report-card">
+                    <div class="report-label">최대 속력 (Max Speed)</div>
+                    <div class="report-value" id="rep-max-speed">0.0 km/h</div>
+                    <div class="report-formula">v_max (SI: 0.0 m/s)</div>
+                </div>
+                <div class="report-card">
+                    <div class="report-label">최대 운동량 (Max Momentum)</div>
+                    <div class="report-value" id="rep-max-p">0.0 kg·m/s</div>
+                    <div class="report-formula">p = m · v_max</div>
+                </div>
+                <div class="report-card">
+                    <div class="report-label">최대 충격량 (Peak Impulse)</div>
+                    <div class="report-value" id="rep-max-impulse">0.0 N·s</div>
+                    <div class="report-formula">I = |Δp| = m · |Δv|</div>
+                </div>
+                <div class="report-card">
+                    <div class="report-label">최대 충격력 (Peak Impact Force)</div>
+                    <div class="report-value" id="rep-max-force">0.0 N</div>
+                    <div class="report-formula">F_avg = I / Δt (충돌 완충 해석)</div>
+                </div>
+                <div class="report-card" style="grid-column: span 2;">
+                    <div class="report-label">최대 운동 에너지 (Max Kinetic Energy)</div>
+                    <div class="report-value" id="rep-max-ke" style="color: #facc15;">0.0 J</div>
+                    <div class="report-formula">E_k = 1/2 · m · v² (역학적 에너지 보존 해석)</div>
+                </div>
+            </div>
+
+            <button class="restart-btn" id="restart-btn">🔄 다시 비행하기</button>
+        </div>
+    </div>
+
+    <button id="end-game-btn">🏁 비행 종료 & 역학 분석</button>
 
     <div id="hud">
         <div class="hud-card">
-            <div class="hud-title">속도 (SPEED)</div>
+            <div class="hud-title">현재 속력</div>
             <div class="hud-val" id="speed-meter">0 <span>km/h</span></div>
         </div>
         <div class="hud-card">
-            <div class="hud-title">골든 링 (RINGS)</div>
-            <div class="hud-val" id="ring-score">0 <span>/ 10</span></div>
+            <div class="hud-title">순간 운동량 (p)</div>
+            <div class="hud-val" id="hud-momentum">0 <span>kg·m/s</span></div>
         </div>
         <div class="hud-card">
-            <div class="hud-title">적용된 생체역학 고분자</div>
-            <div class="hud-val" style="color: {st.session_state.web_color}; font-size: 15px;">BIO-POLYMER MATRIX</div>
+            <div class="hud-title">골든 링</div>
+            <div class="hud-val" id="ring-score">0 <span>/ 10</span></div>
         </div>
     </div>
 
     <div id="stunt-alert">✨ ACROBATIC FLIP! ✨</div>
 
     <div id="controls-guide">
-        • <span class="key-badge">건물 클릭</span> <b>순간이동 없이 거미줄 탄성으로 쭉 당겨지며 비행!</b><br>
-        • <span class="key-badge">드래그</span> 시점 360도 회전 | <span class="key-badge">W,A,S,D</span> 공중 방향 조절<br>
-        • <span class="key-badge">Space</span> 점프 | <span class="key-badge">Space 더블탭</span> <b>360도 공중제비 슈퍼점프</b>
+        • <span class="key-badge">건물 클릭</span> 웹스윙 견인 비행 | <span class="key-badge">W,A,S,D</span> 방향 조타<br>
+        • <span class="key-badge">Space</span> 점프 | <span class="key-badge">더블 Space</span> <b>공중제비 슈퍼점프</b><br>
+        • 우측 상단 <b>[비행 종료]</b> 클릭 시 운동량·충격량 리포트 팝업
     </div>
 
     <div id="canvas-container" tabindex="0"></div>
@@ -309,6 +407,26 @@ with tab_game:
         const WEB_SPEED = {current_web_speed};
         const WEB_RANGE = {current_web_range};
         const WEB_THICKNESS = {current_web_thickness};
+        const PLAYER_MASS = 65.0; // 스파이더맨 표준 체중 (kg)
+        const IMPACT_DT = 0.05;   // 건물 벽 충돌 완충 지속 시간 (s)
+
+        // 물리 계측 로거
+        const physicsLogger = {{
+            maxSpeed: 0.0,
+            maxMomentum: 0.0,
+            maxImpulse: 0.0,
+            maxForce: 0.0,
+            maxKineticEnergy: 0.0,
+            collisionCount: 0,
+            reset: function() {{
+                this.maxSpeed = 0.0;
+                this.maxMomentum = 0.0;
+                this.maxImpulse = 0.0;
+                this.maxForce = 0.0;
+                this.maxKineticEnergy = 0.0;
+                this.collisionCount = 0;
+            }}
+        }};
 
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
@@ -427,7 +545,6 @@ with tab_game:
         webLine.visible = false;
         scene.add(webLine);
 
-        // 물리 객체 (순간이동 없는 탄성 가속도 제어)
         const player = {{
             pos: new THREE.Vector3(0, 25, 0),
             vel: new THREE.Vector3(),
@@ -444,11 +561,46 @@ with tab_game:
         let isDragging = false;
         let startMouseX = 0, startMouseY = 0;
         let clickStartX = 0, clickStartY = 0;
+        let isSimRunning = false;
 
         const overlay = document.getElementById('start-overlay');
+        const reportOverlay = document.getElementById('report-overlay');
+        const endBtn = document.getElementById('end-game-btn');
+        const restartBtn = document.getElementById('restart-btn');
+
         overlay.addEventListener('click', () => {{
             overlay.style.opacity = '0';
             setTimeout(() => {{ overlay.style.display = 'none'; }}, 300);
+            isSimRunning = true;
+            physicsLogger.reset();
+            container.focus();
+        }});
+
+        // 비행 종료 및 분석 리포트 호출
+        endBtn.addEventListener('click', () => {{
+            isSimRunning = false;
+            player.vel.set(0, 0, 0);
+            webLine.visible = false;
+
+            document.getElementById('rep-max-speed').innerHTML = `${{(physicsLogger.maxSpeed * 3.6).toFixed(1)}} <span>km/h</span>`;
+            document.querySelector('#rep-max-speed + .report-formula').innerText = `v_max (SI: ${{physicsLogger.maxSpeed.toFixed(2)}} m/s)`;
+            document.getElementById('rep-max-p').innerHTML = `${{physicsLogger.maxMomentum.toFixed(1)}} <span>kg·m/s</span>`;
+            document.getElementById('rep-max-impulse').innerHTML = `${{physicsLogger.maxImpulse.toFixed(1)}} <span>N·s</span>`;
+            document.getElementById('rep-max-force').innerHTML = `${{physicsLogger.maxForce.toFixed(1)}} <span>N</span>`;
+            document.getElementById('rep-max-ke').innerHTML = `${{physicsLogger.maxKineticEnergy.toFixed(1)}} <span>J</span>`;
+
+            reportOverlay.style.display = 'flex';
+        }});
+
+        restartBtn.addEventListener('click', () => {{
+            reportOverlay.style.display = 'none';
+            player.pos.set(0, 25, 0);
+            player.vel.set(0, 0, 0);
+            ringCount = 0;
+            document.getElementById('ring-score').innerHTML = `0 <span>/ 10</span>`;
+            rings.forEach(r => r.visible = true);
+            physicsLogger.reset();
+            isSimRunning = true;
             container.focus();
         }});
 
@@ -481,7 +633,6 @@ with tab_game:
                     player.canDoubleJump = true;
                 }} else {{
                     if (player.isWebZipping) {{
-                        // 비행 중 거미줄 릴리즈 & 탄력 점프
                         player.isWebZipping = false;
                         webLine.visible = false;
                         player.vel.y = Math.max(player.vel.y, 22.0);
@@ -527,7 +678,7 @@ with tab_game:
             if (!isDragging) return;
             isDragging = false;
             const moveDist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
-            if (moveDist < 6) {{
+            if (moveDist < 6 && isSimRunning) {{
                 const rect = renderer.domElement.getBoundingClientRect();
                 mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
                 mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -537,7 +688,6 @@ with tab_game:
                 const hits = raycaster.intersectObjects(buildings);
 
                 if (hits.length > 0 && hits[0].point.y > 4) {{
-                    // 순간이동 없이 거미줄 걸고 당기기 시작
                     player.isWebZipping = true;
                     player.zipTarget.copy(hits[0].point);
                     webLine.visible = true;
@@ -546,6 +696,7 @@ with tab_game:
             }}
         }});
 
+        // 충돌 판정 및 충격량(I = m * |Δv|) 적산 함수
         function resolveBuildingCollisions() {{
             const px = player.pos.x;
             const py = player.pos.y;
@@ -580,8 +731,27 @@ with tab_game:
                             player.isWebZipping = false;
                             webLine.visible = false;
                         }}
+
+                        // [충격량 연산]: v_pre와 v_post 사이의 속도 벡터 차이 분석
+                        const preVx = player.vel.x;
+                        const preVz = player.vel.z;
                         player.vel.x *= -0.2;
                         player.vel.z *= -0.2;
+
+                        const deltaVx = player.vel.x - preVx;
+                        const deltaVz = player.vel.z - preVz;
+                        const deltaV = Math.hypot(deltaVx, deltaVz);
+
+                        // I = m * |Δv|
+                        const impulse = PLAYER_MASS * deltaV;
+                        const impactForce = impulse / IMPACT_DT;
+
+                        if (impulse > physicsLogger.maxImpulse) {{
+                            physicsLogger.maxImpulse = impulse;
+                            physicsLogger.maxForce = impactForce;
+                        }}
+                        physicsLogger.collisionCount++;
+
                         triggerHitEffect();
                     }}
                 }}
@@ -590,11 +760,17 @@ with tab_game:
 
         const clock = new THREE.Clock();
         const speedMeter = document.getElementById('speed-meter');
+        const hudMomentum = document.getElementById('hud-momentum');
         const ringScore = document.getElementById('ring-score');
 
         function animate() {{
             requestAnimationFrame(animate);
             const delta = Math.min(clock.getDelta(), 0.05);
+
+            if (!isSimRunning) {{
+                renderer.render(scene, camera);
+                return;
+            }}
 
             const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
             const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
@@ -607,22 +783,18 @@ with tab_game:
             if (move.lengthSq() > 0) move.normalize();
 
             if (player.isWebZipping) {{
-                // [순간이동 없는 연속 탄성 가속도 모델]
                 const toTarget = new THREE.Vector3().subVectors(player.zipTarget, player.pos);
                 const dist = toTarget.length();
 
                 if (dist < 4.0) {{
-                    // 목표 도착 시 부드러운 릴리즈 & 공중 상승
                     player.isWebZipping = false;
                     webLine.visible = false;
                     player.vel.y = Math.max(player.vel.y, 20.0);
                 }} else {{
-                    // 목표 방향으로 탄성 가속도를 지속 누적하여 슉 날아가게 유도
                     const pullDir = toTarget.normalize();
                     const targetSpeed = Math.min(dist * 2.8, WEB_SPEED * 0.45);
                     player.vel.lerp(pullDir.multiplyScalar(targetSpeed), delta * 5.0);
 
-                    // 좌우 미세 회피 조향
                     if (keys['KeyA']) player.vel.add(right.clone().multiplyScalar(-10));
                     if (keys['KeyD']) player.vel.add(right.clone().multiplyScalar(10));
 
@@ -695,7 +867,20 @@ with tab_game:
                 }}
             }});
 
-            speedMeter.innerHTML = `${{Math.round(player.vel.length() * 3.6)}} <span>km/h</span>`;
+            // 실시간 물리 상태 적산
+            const currentSpeed = player.vel.length(); // 단위: m/s
+            const currentMomentum = PLAYER_MASS * currentSpeed; // kg·m/s
+            const currentKE = 0.5 * PLAYER_MASS * currentSpeed * currentSpeed; // J
+
+            if (currentSpeed > physicsLogger.maxSpeed) {{
+                physicsLogger.maxSpeed = currentSpeed;
+                physicsLogger.maxMomentum = currentMomentum;
+                physicsLogger.maxKineticEnergy = currentKE;
+            }}
+
+            speedMeter.innerHTML = `${{Math.round(currentSpeed * 3.6)}} <span>km/h</span>`;
+            hudMomentum.innerHTML = `${{Math.round(currentMomentum)}} <span>kg·m/s</span>`;
+
             renderer.render(scene, camera);
         }}
 
@@ -713,7 +898,7 @@ with tab_game:
 
     components.html(game_html, height=840, scrolling=False)
 
-# ==================== [TAB 3: 전면 개편된 보스전: 느려진 고블린 + 확실한 거미줄 발사 & 포박 시스템] ====================
+# ==================== [TAB 3: 보스전] ====================
 with tab_boss:
     boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     boss_web_speed = float(st.session_state.web_speed)
@@ -741,8 +926,6 @@ with tab_boss:
             cursor: crosshair; 
             outline: none;
         }}
-
-        /* 중앙 상단 대형 HUD: 고블린 체력 & 거미줄 포박 게이지 */
         #boss-ui {{
             position: absolute;
             top: 15px;
@@ -781,8 +964,6 @@ with tab_boss:
             background: linear-gradient(90deg, #dc2626, #f97316);
             transition: width 0.15s ease-out;
         }}
-        
-        /* 거미줄 포박 게이지 (눈에 잘 띄는 대형 바) */
         .bind-header {{
             display: flex;
             justify-content: space-between;
@@ -806,8 +987,6 @@ with tab_boss:
             box-shadow: 0 0 10px #38bdf8;
             transition: width 0.15s ease;
         }}
-
-        /* 좌상단: 플레이어 체력 & 궁극기(ULTIMATE) 게이지 */
         #player-ui {{
             position: absolute;
             top: 15px;
@@ -836,7 +1015,6 @@ with tab_boss:
         }}
         @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
 
-        /* 중앙 알림 배너 (포박, 궁극기) */
         #action-banner {{
             position: absolute;
             top: 130px;
@@ -857,7 +1035,6 @@ with tab_boss:
             transform: translateX(-50%) scale(1.1);
         }}
 
-        /* 하단 조작 가이드 */
         #boss-guide {{
             position: absolute;
             bottom: 20px;
@@ -951,7 +1128,6 @@ with tab_boss:
         </div>
     </div>
 
-    <!-- 고블린 체력 및 실시간 거미줄 포박 게이지 -->
     <div id="boss-ui">
         <div class="boss-header">
             <span>😈 GREEN GOBLIN</span>
@@ -995,7 +1171,6 @@ with tab_boss:
         dirLight.position.set(50, 120, 60);
         scene.add(dirLight);
 
-        // 아레나 바닥
         const arena = new THREE.Mesh(
             new THREE.BoxGeometry(140, 4, 140),
             new THREE.MeshStandardMaterial({{ color: 0x1e293b, roughness: 0.6 }})
@@ -1003,7 +1178,6 @@ with tab_boss:
         arena.position.y = -2;
         scene.add(arena);
 
-        // 등반용 빌딩 타워 4채
         const climbBuildings = [];
         const towerGeo = new THREE.BoxGeometry(18, 55, 18);
         const towerMat = new THREE.MeshStandardMaterial({{ color: 0x334155, roughness: 0.4 }});
@@ -1022,7 +1196,6 @@ with tab_boss:
             }});
         }});
 
-        // 플레이어 (스파이더맨)
         const playerGroup = new THREE.Group();
         scene.add(playerGroup);
 
@@ -1048,7 +1221,6 @@ with tab_boss:
             invulnerableTime: 2.0
         }};
 
-        // 고블린 보스 모델링 & 거미줄 포박 그물망
         const goblinGroup = new THREE.Group();
         scene.add(goblinGroup);
 
@@ -1068,7 +1240,6 @@ with tab_boss:
         gobHead.position.y = 2.0;
         goblinGroup.add(gobHead);
 
-        // 맞을 때마다 몸에 칭칭 감기는 실제 3D 거미줄 와이어 메시
         const webTrapGroup = new THREE.Group();
         const webLineMat = new THREE.LineBasicMaterial({{ color: 0xffffff, linewidth: 3 }});
         for (let i = 0; i < 12; i++) {{
@@ -1081,7 +1252,6 @@ with tab_boss:
         webTrapGroup.visible = false;
         goblinGroup.add(webTrapGroup);
 
-        // 차분하고 안정된 속도로 선회하도록 파라미터 대폭 완화
         const boss = {{
             pos: new THREE.Vector3(0, 12, -18),
             targetPos: new THREE.Vector3(0, 12, -18),
@@ -1093,16 +1263,14 @@ with tab_boss:
         }};
         goblinGroup.position.copy(boss.pos);
 
-        // 투사체
         const webBullets = [];
         const webBulletGeo = new THREE.SphereGeometry(0.65, 12, 12);
-        const webBulletMat = new THREE.MeshBasicMaterial({{ color: 0xffffff }}); // 하얀 거미줄 덩어리
+        const webBulletMat = new THREE.MeshBasicMaterial({{ color: 0xffffff }});
 
         const pumpkinBombs = [];
         const bombGeo = new THREE.SphereGeometry(0.65, 12, 12);
         const bombMat = new THREE.MeshStandardMaterial({{ color: 0xea580c, emissive: 0xf97316, emissiveIntensity: 0.8 }});
 
-        // 조작 & UI
         let isStarted = false;
         let isGameOver = false;
         let yaw = 0;
@@ -1170,7 +1338,6 @@ with tab_boss:
 
         container.addEventListener('click', ensureFocus);
 
-        // 키보드 이벤트
         window.addEventListener('keydown', (e) => {{
             keys[e.code] = true;
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {{
@@ -1182,17 +1349,14 @@ with tab_boss:
         }});
         window.addEventListener('keyup', (e) => {{ keys[e.code] = false; }});
 
-        // 마우스 드래그(시점) & 마우스 좌클릭(거미줄 무조건 즉시 발사)
         container.addEventListener('mousedown', (e) => {{
             ensureFocus();
 
             if (e.button === 0) {{
-                // 좌클릭: 즉시 거미줄 발사! (드래그 여부 상관없이 100% 발사 보장)
                 if (isStarted && !isGameOver) {{
                     shootWebBullet();
                 }}
             }} else if (e.button === 2) {{
-                // 우클릭: 궁극기 발사
                 fireUltimate();
             }}
 
@@ -1217,7 +1381,6 @@ with tab_boss:
             isRightDragging = false;
         }});
 
-        // 거미줄 발사 함수
         function shootWebBullet() {{
             const shootDir = new THREE.Vector3(
                 -Math.sin(yaw) * Math.cos(pitch),
@@ -1231,12 +1394,11 @@ with tab_boss:
 
             webBullets.push({{
                 mesh: bullet,
-                vel: shootDir.multiplyScalar(130.0), // 시원하고 빠른 탄속
+                vel: shootDir.multiplyScalar(130.0),
                 life: 2.5
             }});
         }}
 
-        // 궁극기: 웹 블라섬
         function fireUltimate() {{
             if (!isStarted || isGameOver || player.ultGauge < 100) return;
             player.ultGauge = 0;
@@ -1276,7 +1438,7 @@ with tab_boss:
                 if (isNearX && isNearZ && player.pos.y < t.topY) {{
                     if (keys['KeyW'] || keys['Space'] || keys['ArrowUp']) {{
                         player.isWallClimbing = true;
-                        player.vel.y = 34.0; // 빠른 수직 벽등반
+                        player.vel.y = 34.0;
                         player.vel.x *= 0.3;
                         player.vel.z *= 0.3;
                         return;
@@ -1301,7 +1463,6 @@ with tab_boss:
             const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
             const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
 
-            // 1) 플레이어 초고속 이동
             const move = new THREE.Vector3();
             if (keys['KeyW'] || keys['ArrowUp']) move.add(forward);
             if (keys['KeyS'] || keys['ArrowDown']) move.sub(forward);
@@ -1340,12 +1501,10 @@ with tab_boss:
             player.pos.z = Math.max(-62, Math.min(62, player.pos.z));
             playerGroup.position.copy(player.pos);
 
-            // 2) 고블린 보스 AI (침착한 원형 선회 & 거미줄 포박 기절)
             if (boss.stunTimer > 0) {{
-                // [포박 상태]: 바닥으로 곤두박질치며 5초간 기절
                 boss.stunTimer -= delta;
-                boss.pos.y = Math.max(1.0, boss.pos.y - 18.0 * delta); // 바닥으로 추락
-                webTrapGroup.visible = true; // 거미줄로 칭칭 감긴 모습
+                boss.pos.y = Math.max(1.0, boss.pos.y - 18.0 * delta);
+                webTrapGroup.visible = true;
                 goblinGroup.rotation.z = Math.sin(clock.getElapsedTime() * 10) * 0.1;
                 goblinGroup.position.copy(boss.pos);
 
@@ -1356,7 +1515,6 @@ with tab_boss:
                     bossBindText.innerText = '0%';
                 }}
             }} else {{
-                // 정상 비행 상태 (속도를 0.45로 대폭 낮춰 조준이 편함)
                 boss.angle += delta * 0.45;
                 boss.pos.x = Math.sin(boss.angle) * 26;
                 boss.pos.z = Math.cos(boss.angle) * 22 - 6;
@@ -1364,7 +1522,6 @@ with tab_boss:
                 goblinGroup.position.copy(boss.pos);
                 goblinGroup.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
 
-                // 느리고 피하기 쉬운 폭탄 투척 (3초 간격)
                 boss.attackTimer += delta;
                 if (boss.attackTimer > 3.0) {{
                     boss.attackTimer = 0;
@@ -1381,31 +1538,26 @@ with tab_boss:
                 }}
             }}
 
-            // 3) 거미줄 투사체 적중 판정 & 거미줄 포박 게이지 누적
             for (let i = webBullets.length - 1; i >= 0; i--) {{
                 const b = webBullets[i];
                 b.mesh.position.addScaledVector(b.vel, delta);
                 b.life -= delta;
 
                 if (b.mesh.position.distanceTo(boss.pos) < 3.8) {{
-                    // 거미줄 명중!
                     const dmg = b.isUlt ? 30 : 10;
                     boss.hp = Math.max(0, boss.hp - dmg);
                     bossHpBar.style.width = boss.hp + '%';
                     bossHpText.innerText = 'HP ' + boss.hp + '%';
 
-                    // 거미줄 포박 게이지 25%씩 누적 (4번 맞추면 100% 포박)
                     boss.bindMeter = Math.min(100, boss.bindMeter + (b.isUlt ? 60 : 25));
                     bossBindBar.style.width = boss.bindMeter + '%';
                     bossBindText.innerText = boss.bindMeter + '%';
 
-                    // 100% 도달 시 즉시 추락 & 5초 포박 기절 발동!
                     if (boss.bindMeter >= 100 && boss.stunTimer <= 0) {{
-                        boss.stunTimer = 5.0; // 5초간 무방비 포박 기절
+                        boss.stunTimer = 5.0;
                         showBanner("🕸️ 고블린 완전 포박! 5초간 무방비 기절! 🕸️", "#38bdf8");
                     }}
 
-                    // 플레이어 궁극기 게이지 충전
                     player.ultGauge = Math.min(100, player.ultGauge + 20);
                     ultBar.style.width = player.ultGauge + '%';
                     if (player.ultGauge >= 100) ultReadyTag.style.display = 'inline';
@@ -1429,7 +1581,6 @@ with tab_boss:
                 }}
             }}
 
-            // 4) 폭탄 판정
             for (let i = pumpkinBombs.length - 1; i >= 0; i--) {{
                 const pb = pumpkinBombs[i];
                 pb.mesh.position.addScaledVector(pb.vel, delta);
@@ -1461,7 +1612,6 @@ with tab_boss:
                 }}
             }}
 
-            // 5) 카메라 추적
             const camDist = 7.5;
             const camH = 3.0;
             camera.position.set(
