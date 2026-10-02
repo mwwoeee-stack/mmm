@@ -6,6 +6,12 @@ import math
 st.set_page_config(
     page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
     page_icon="🕷️️",
+    st.set_page_config(
+    page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
+    page_icon="🕷️",
+    layout="wide",
+    initial_sidebar_state="expanded",  # <-- 항상 열어두기로 변경!
+)
     layout="wide",
     initial_sidebar_state="collapsed"
 )
