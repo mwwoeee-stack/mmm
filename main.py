@@ -2,28 +2,21 @@ import streamlit as st
 import streamlit.components.v1 as components
 import math
 
-# 1. 스트림릿 와이드 모드 설정
+# 1. 스트림릿 와이드 모드 설정 (사이드바 기본 열림 상태로 변경)
 st.set_page_config(
-    page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
-    page_icon="🕷️️",
-    st.set_page_config(
     page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
     page_icon="🕷️",
     layout="wide",
-    initial_sidebar_state="expanded",  # <-- 항상 열어두기로 변경!
-)
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# 기본 UI 여백 정리
+# 기본 UI 여백 정리 (사이드바 버튼을 가리는 header 숨김 코드 제거)
 st.markdown("""
 <style>
     .block-container {
         padding: 0.8rem 1.2rem !important;
         max-width: 100% !important;
     }
-    header {visibility: hidden;}
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
@@ -93,7 +86,7 @@ with tab_lab:
             "thickness": 5,
             "desc": "굵은 섬유 다발과 유연한 충격 흡수력을 통해 안정적인 제동과 보스 포박에 적합한 묵직한 세팅입니다."
         },
-        "⚖️️ [피터의 추천 4] 데일리 순찰 밸런스형 (Standard Daily)": {
+        "⚖️ [피터의 추천 4] 데일리 순찰 밸런스형 (Standard Daily)": {
             "matrix": "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)",
             "rho_x": 6.5,
             "delta_p": 22.0,
