@@ -5,7 +5,7 @@ import math
 # 1. 스트림릿 와이드 모드 설정
 st.set_page_config(
     page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
-    page_icon="🕷️",
+    page_icon="🕷️️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -40,25 +40,106 @@ if "web_range" not in st.session_state:
 if "web_thickness" not in st.session_state:
     st.session_state.web_thickness = 3
 
+# UI 슬라이더 제어용 세션 상태
+if "slider_matrix" not in st.session_state:
+    st.session_state.slider_matrix = "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)"
+if "slider_rho_x" not in st.session_state:
+    st.session_state.slider_rho_x = 6.5
+if "slider_delta_p" not in st.session_state:
+    st.session_state.slider_delta_p = 22.0
+if "slider_thickness" not in st.session_state:
+    st.session_state.slider_thickness = 3
+if "slider_color" not in st.session_state:
+    st.session_state.slider_color = "#38bdf8"
+
 # ==================== [TAB 2: 거미줄 제작 & 물리역학 연구소] ====================
 with tab_lab:
     st.header("🧪 첨단 생체고분자 복합소재 & 유체역학 조제실")
     st.caption("방사형 거미줄 단백질(Spidroin) 모방 합성 고분자의 미세 역학적 물성과 유체 노즐 분사 동역학 분석")
     st.markdown("---")
 
+    # [피터 파커의 추천 프리셋 데이터 정의]
+    PRESETS = {
+        "⚙️ 커스텀 조제 (직접 수치 조정)": {
+            "desc": "물리화학 파라미터를 원하는 대로 미세 튜닝하는 기본 모드입니다."
+        },
+        "🏙️ [피터의 추천 1] 도심 고속 비행용 (Speed Booster)": {
+            "matrix": "탄소나노튜브 복합 폴리아크릴로니트릴 (CNT-PAN Hybrid)",
+            "rho_x": 9.5,
+            "delta_p": 25.0,
+            "color": "#38bdf8",
+            "thickness": 3,
+            "desc": "높은 가교 밀도로 고탄성(High Young's Modulus)을 구현하여 강력한 인장력으로 시티 스윙 속도를 극대화합니다."
+        },
+        "🎯 [피터의 추천 2] 원거리 저격 & 랜드마크 타격용 (Long Range)": {
+            "matrix": "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)",
+            "rho_x": 5.5,
+            "delta_p": 34.0,
+            "color": "#facc15",
+            "thickness": 2,
+            "desc": "노즐 챔버 압력을 최대치로 끌어올려 베르누이 유속(v₀)과 유효 사정거리를 최대로 확보한 세팅입니다."
+        },
+        "🛡️ [피터의 추천 3] 빌런 제압 & 안전 포박용 (Heavy Duty)": {
+            "matrix": "자가치유 디설피드 가교 히드로겔 (Self-Healing Hydrogel)",
+            "rho_x": 4.0,
+            "delta_p": 16.0,
+            "color": "#ef4444",
+            "thickness": 5,
+            "desc": "굵은 섬유 다발과 유연한 충격 흡수력을 통해 안정적인 제동과 보스 포박에 적합한 묵직한 세팅입니다."
+        },
+        "⚖️️ [피터의 추천 4] 데일리 순찰 밸런스형 (Standard Daily)": {
+            "matrix": "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)",
+            "rho_x": 6.5,
+            "delta_p": 22.0,
+            "color": "#06b6d4",
+            "thickness": 3,
+            "desc": "비행 견인 속도(110 km/h)와 사정거리(190 m)의 황금 밸런스를 맞춘 피터 파커의 시그니처 세팅입니다."
+        }
+    }
+
+    def on_preset_change():
+        selected = st.session_state.selected_preset_key
+        if selected != "⚙️ 커스텀 조제 (직접 수치 조정)":
+            cfg = PRESETS[selected]
+            st.session_state.slider_matrix = cfg["matrix"]
+            st.session_state.slider_rho_x = cfg["rho_x"]
+            st.session_state.slider_delta_p = cfg["delta_p"]
+            st.session_state.slider_color = cfg["color"]
+            st.session_state.slider_thickness = cfg["thickness"]
+
+    # 피터 파커의 퀵 가이드 및 추천 프리셋 선택창
+    st.markdown("#### 🕷️ 피터 파커의 웹슈터 조제 어시스턴트")
+    c_preset, c_desc = st.columns([1, 1.4])
+    with c_preset:
+        preset_choice = st.selectbox(
+            "상황별 권장 세팅 선택 (Preset)",
+            list(PRESETS.keys()),
+            index=0,
+            key="selected_preset_key",
+            on_change=on_preset_change
+        )
+    with c_desc:
+        st.info(f"💡 **프리셋 특징**: {PRESETS[preset_choice]['desc']}")
+
+    st.markdown("<br>", unsafe_allow_html=True)
     col_ctrl, col_physics = st.columns([1.1, 1.2])
 
     with col_ctrl:
         st.subheader("⚙ 고분자 나노구조 및 사출 공학 제어")
 
+        matrix_options = [
+            "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)",
+            "탄소나노튜브 복합 폴리아크릴로니트릴 (CNT-PAN Hybrid)",
+            "점탄성 폴리우레탄-실리카 나노입자 (Viscoelastic PU-SiO2)",
+            "자가치유 디설피드 가교 히드로겔 (Self-Healing Hydrogel)"
+        ]
+        curr_idx = matrix_options.index(st.session_state.slider_matrix) if st.session_state.slider_matrix in matrix_options else 0
+
         fluid_base = st.selectbox(
             "기반 생체 복합 폴리머 기질 (Polymer Matrix)",
-            [
-                "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)",
-                "탄소나노튜브 복합 폴리아크릴로니트릴 (CNT-PAN Hybrid)",
-                "점탄성 폴리우레탄-실리카 나노입자 (Viscoelastic PU-SiO2)",
-                "자가치유 디설피드 가교 히드로겔 (Self-Healing Hydrogel)"
-            ]
+            matrix_options,
+            index=curr_idx,
+            key="slider_matrix"
         )
 
         st.markdown("#### 1. 나노 네트워크 가교도 (Crosslinking Density)")
@@ -66,9 +147,10 @@ with tab_lab:
             "가교 밀도 ρ_x (10^4 mol/m³)",
             min_value=1.5,
             max_value=12.0,
-            value=6.5,
+            value=float(st.session_state.slider_rho_x),
             step=0.5,
-            help="고분자 사슬 간 화학적 공유결합 밀도입니다. 영률(Young's modulus)과 비행 견인 속도에 비례합니다."
+            key="slider_rho_x",
+            help="고분자 사슬 간 화학적 공유결합 밀도입니다. 높을수록 거미줄이 팽팽해져 '비행 속도'가 빨라집니다."
         )
 
         st.markdown("#### 2. 마이크로 노즐 사출 압력 (Chamber Pressure)")
@@ -76,15 +158,27 @@ with tab_lab:
             "노즐 압축 챔버 압력 ΔP (MPa)",
             min_value=8.0,
             max_value=35.0,
-            value=22.0,
+            value=float(st.session_state.slider_delta_p),
             step=1.0,
-            help="웹슈터의 마이크로 플루이딕 노즐 내부 분사 압력입니다. 거미줄 최대 사정거리를 결정합니다."
+            key="slider_delta_p",
+            help="웹슈터 노즐 내부의 유체 분사 압력입니다. 높을수록 거미줄의 '유효 사정거리'가 대폭 길어집니다."
         )
 
         st.markdown("#### 3. 거미줄 광학 표면 물성")
-        selected_color = st.color_picker("생체 형광 광학 색상 (Photoluminescence)", st.session_state.web_color)
-        selected_thickness = st.slider("섬유 다발 가닥 수 / 직경 d (μm)", 1, 6, st.session_state.web_thickness)
+        selected_color = st.color_picker(
+            "생체 형광 광학 색상 (Photoluminescence)",
+            value=st.session_state.slider_color,
+            key="slider_color"
+        )
+        selected_thickness = st.slider(
+            "섬유 다발 가닥 수 / 직경 d (μm)",
+            1, 6,
+            value=int(st.session_state.slider_thickness),
+            key="slider_thickness",
+            help="줄의 굵기입니다. 3D 화면 속 거미줄 라인의 시각적 두께에 반영됩니다."
+        )
 
+    # 물리 역학 계산식
     R_gas = 8.314
     Temp = 298.15
     youngs_modulus_gpa = (3.0 * (crosslink_density * 1e4) * R_gas * Temp) / 1e9
@@ -101,10 +195,10 @@ with tab_lab:
         st.subheader("📐 유도된 물리·역학적 지표 및 수식 모델")
 
         st.latex(r"E \approx 3 \rho_x R T \quad \implies \quad v_{\text{zip}} \propto \sqrt{\frac{E}{\rho_{\text{fiber}}}}")
-        st.caption("• **고무 탄성 이론**: 가교 밀도가 증가할수록 영률이 상승하여 비행 추진 속도가 증가합니다.")
+        st.caption("• **고무 탄성 이론**: 가교 밀도(ρ_x)가 증가하면 탄성 영률(E)이 올라 비행 추진 속도가 증가합니다.")
 
         st.latex(r"Q = \frac{\pi r^4 \Delta P}{8 \mu L}, \quad v_0 = \sqrt{\frac{2 \Delta P}{\rho_{\text{fluid}}}} \quad \implies \quad R_{\max} \propto \frac{v_0^2}{g}")
-        st.caption("• **베르누이 및 사출 동역학**: 노즐 압력차로 방사 속도 및 최대 사정거리를 도출합니다.")
+        st.caption("• **베르누이 및 사출 동역학**: 노즐 챔버 압력(ΔP)이 강할수록 분사 속도(v₀)와 최대 사정거리(R_max)가 증가합니다.")
 
         st.markdown("---")
         m1, m2 = st.columns(2)
@@ -150,7 +244,7 @@ with tab_game:
             position: absolute; 
             top: 0; 
             left: 0; 
-            cursor: grab;
+            cursor: grab; 
             outline: none;
         }}
         #canvas-container:active {{ cursor: grabbing; }}
@@ -882,7 +976,7 @@ with tab_boss:
             cursor: crosshair; 
             outline: none;
         }}
-        #boss-ui {{
+        #boss-ui {{ 
             position: absolute;
             top: 15px;
             left: 50%;
@@ -1372,7 +1466,7 @@ with tab_boss:
             bossHeadMat.color.setHex(cfg.accentColor);
 
             if (stage === 3) {{
-                bossGroup.scale.set(1.5, 1.5, 1.5); // 베놈 거대화
+                bossGroup.scale.set(1.5, 1.5, 1.5);
             }} else {{
                 bossGroup.scale.set(1.0, 1.0, 1.0);
             }}
@@ -1390,7 +1484,6 @@ with tab_boss:
             bossBindText.innerText = '0%';
         }}
 
-        // 모달 클릭 (시작/재도전)
         modalScreen.addEventListener('click', () => {{
             if (isGameOver) {{
                 currentStage = 1;
@@ -1425,7 +1518,6 @@ with tab_boss:
             container.focus();
         }});
 
-        // 능력 업그레이드 선택 로직
         window.chooseUpgrade = function(type) {{
             player.level++;
             document.getElementById('player-lvl-tag').innerText = `LV ${{player.level}} 스파이더맨`;
@@ -1448,14 +1540,12 @@ with tab_boss:
             upgradeOverlay.style.display = 'none';
             isUpgrading = false;
 
-            // 다음 스테이지 진입
             currentStage++;
             setupBossStage(currentStage);
             showBanner(`⚔️ ${{STAGE_CONFIG[currentStage].name}} 출현!`, "#ef4444");
             container.focus();
         }};
 
-        // 마우스 & 키 이벤트
         window.addEventListener('keydown', (e) => {{
             keys[e.code] = true;
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -1567,7 +1657,6 @@ with tab_boss:
             const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
             const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
 
-            // 플레이어 기동
             const move = new THREE.Vector3();
             if (keys['KeyW'] || keys['ArrowUp']) move.add(forward);
             if (keys['KeyS'] || keys['ArrowDown']) move.sub(forward);
@@ -1605,7 +1694,6 @@ with tab_boss:
             player.pos.z = Math.max(-62, Math.min(62, player.pos.z));
             playerGroup.position.copy(player.pos);
 
-            // 보스 AI 및 투사체 패턴
             const cfg = STAGE_CONFIG[currentStage];
             if (boss.stunTimer > 0) {{
                 boss.stunTimer -= delta;
@@ -1644,7 +1732,6 @@ with tab_boss:
                 }}
             }}
 
-            // 거미줄 탄환 판정
             for (let i = webBullets.length - 1; i >= 0; i--) {{
                 const b = webBullets[i];
                 b.mesh.position.addScaledVector(b.vel, delta);
@@ -1673,15 +1760,12 @@ with tab_boss:
                     scene.remove(b.mesh);
                     webBullets.splice(i, 1);
 
-                    // 보스 처치 판정
                     if (boss.hp <= 0) {{
                         if (currentStage < 3) {{
-                            // 레벨업 화면 호출
                             isUpgrading = true;
                             upgradeOverlay.style.display = 'flex';
                             document.getElementById('level-reward-desc').innerText = `${{cfg.name}} 처치 완료! 다음 보스전을 위해 능력을 업그레이드하세요.`;
                         }} else {{
-                            // 최종 승리
                             isGameOver = true;
                             modalTitle.innerText = "🏆 ALL BOSSES DEFEATED!";
                             modalTitle.style.color = "#22c55e";
@@ -1698,7 +1782,6 @@ with tab_boss:
                 }}
             }}
 
-            // 보스 탄환 피격 판정
             for (let i = bossProjectiles.length - 1; i >= 0; i--) {{
                 const pb = bossProjectiles[i];
                 pb.mesh.position.addScaledVector(pb.vel, delta);
@@ -1731,7 +1814,6 @@ with tab_boss:
                 }}
             }}
 
-            // 카메라 추적
             const camDist = 7.5;
             const camH = 3.0;
             camera.position.set(
