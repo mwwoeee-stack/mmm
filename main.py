@@ -10,50 +10,40 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 상단 흰색 여백, 로딩바, 헤더 툴바 및 내부 컨테이너 패딩 강제 제거
+# 상단 흰색 여백 제거 및 불필요한 Streamlit 헤더 정리
 st.markdown("""
 <style>
-    /* 1. 상단 Streamlit 헤더 및 툴바 완전 제거 */
+    /* 상단 헤더 높이 최소화 */
     header[data-testid="stHeader"] {
-        display: none !important;
+        background: transparent !important;
+        height: 1.5rem !important;
+        z-index: 1 !important;
     }
     
-    /* 2. 최상단 컨테이너 패딩 및 마진 강제 0 */
-    .stAppViewContainer, .main, .block-container {
-        padding-top: 0 !important;
-        margin-top: 0 !important;
+    /* 최상단 여백(padding-top) 0으로 설정 */
+    .block-container {
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
         max-width: 100% !important;
     }
-    
-    /* 3. 탭 바를 상단 맨 끝으로 밀착 */
+
+    /* 탭 헤더 및 내부 여백 밀착 */
     div[data-testid="stTabs"] {
-        margin-top: 0 !important;
-        padding-top: 0 !important;
+        margin-top: -0.5rem !important;
     }
-    
     div[data-baseweb="tab-list"] {
-        padding: 0 !important;
-        margin: 0 !important;
+        gap: 8px;
     }
-
     div[data-baseweb="tab-panel"] {
-        padding: 0 !important;
-        margin: 0 !important;
+        padding-top: 0.2rem !important;
     }
 
-    /* 4. iframe 래퍼의 상단 빈 공간 강제 삭제 */
-    div[data-testid="stCustomComponentV1"] {
-        margin-top: -10px !important;
-        padding: 0 !important;
-    }
-
+    /* components.html iframe 테두리 및 여백 제거 */
     iframe {
         border: none !important;
         display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
     }
 
     footer {visibility: hidden;}
