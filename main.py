@@ -931,3 +931,932 @@ with tab_game:
             if (player.vel.lengthSq() > 1.0) {{
                 playerGroup.rotation.y = Math.atan2(player.vel.x, player.vel.z);
             }}
+
+            const camDist = 6.8;
+            const camH = 2.6;
+            camera.position.set(
+                player.pos.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
+                player.pos.y + Math.sin(pitch) * camDist + camH,
+                player.pos.z + Math.cos(yaw) * Math.cos(pitch) * camDist
+            );
+            camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
+
+            rings.forEach(ring => {{
+                ring.rotation.y += 0.02;
+                if (ring.visible && player.pos.distanceTo(ring.position) < 5.0) {{
+                    ring.visible = false;
+                    ringCount++;
+                    ringScore.innerHTML = `${{ringCount}} <span>/ 10</span>`;
+                    player.vel.y = Math.max(player.vel.y, 18);
+                    player.vel.add(forward.clone().multiplyScalar(22));
+                    player.canDoubleJump = true;
+                }}
+            }});
+
+            const currentSpeed = player.vel.length();
+            const currentMomentum = PLAYER_MASS * currentSpeed;
+            const currentKE = 0.5 * PLAYER_MASS * currentSpeed * currentSpeed;
+
+            if (currentSpeed > physicsLogger.maxSpeed) {{
+                physicsLogger.maxSpeed = currentSpeed;
+                physicsLogger.maxMomentum = currentMomentum;
+                physicsLogger.maxKineticEnergy = currentKE;
+            }}
+
+            speedMeter.innerHTML = `${{Math.round(currentSpeed * 3.6)}} <span>km/h</span>`;
+            hudMomentum.innerHTML = `${{Math.round(currentMomentum)}} <span>kg·m/s</span>`;
+
+            renderer.render(scene, camera);
+        }}
+
+        window.addEventListener('resize', () => {{
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }});
+
+        animate();
+    </script>
+    </body>
+    </html>
+    """
+
+    components.html(game_html, height=750, scrolling=False)
+
+# ==================== [TAB 3: 보스전 (빌런 진화 + 능력 업그레이드 시스템)] ====================
+with tab_boss:
+    boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
+    boss_web_speed = float(st.session_state.web_speed)
+
+    boss_html = f"""
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+    <meta charset="utf-8">
+    <style>
+        * {{ box-sizing: border-box; margin: 0; padding: 0; user-select: none; }}
+        html, body {{ 
+            width: 100%; 
+            height: 100vh; 
+            overflow: hidden; 
+            background: #060814; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+        }}
+        #boss-canvas {{ 
+            width: 100%; 
+            height: 100%; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            cursor: crosshair; 
+            outline: none;
+        }}
+        #boss-ui {{ 
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(700px, 92vw);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.88);
+            padding: 12px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }}
+        .boss-header {{
+            display: flex;
+            justify-content: space-between;
+            color: #ef4444;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            font-size: 15px;
+        }}
+        .boss-hp-bg {{
+            width: 100%;
+            height: 16px;
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+        }}
+        #boss-hp-bar {{
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #dc2626, #f97316);
+            transition: width 0.15s ease-out;
+        }}
+        .bind-header {{
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 800;
+            color: #38bdf8;
+            margin-top: 2px;
+        }}
+        .boss-bind-bg {{
+            width: 100%;
+            height: 14px;
+            background: #0f172a;
+            border-radius: 7px;
+            overflow: hidden;
+            border: 1px solid #0284c7;
+        }}
+        #boss-bind-bar {{
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #ffffff);
+            box-shadow: 0 0 10px #38bdf8;
+            transition: width 0.15s ease;
+        }}
+        #player-ui {{
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }}
+        .bar-label {{ font-size: 11px; font-weight: 700; color: #94a3b8; display: flex; justify-content: space-between; }}
+        .bar-bg {{ width: 170px; height: 11px; background: #1e293b; border-radius: 5px; overflow: hidden; }}
+        #player-hp-bar {{ width: 100%; height: 100%; background: #22c55e; transition: width 0.2s ease; }}
+        #ult-bar {{ width: 0%; height: 100%; background: linear-gradient(90deg, #06b6d4, #facc15); transition: width 0.15s ease; }}
+        #ult-ready-tag {{
+            font-size: 11px;
+            color: #facc15;
+            font-weight: 900;
+            display: none;
+            animation: blink 0.8s infinite;
+        }}
+        @keyframes blink {{ 0%, 100% {{ opacity: 1; }} 50% {{ opacity: 0.3; }} }}
+
+        .stat-badge {{
+            font-size: 11px;
+            color: #38bdf8;
+            font-weight: 700;
+            background: rgba(56, 189, 248, 0.15);
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }}
+
+        #action-banner {{
+            position: absolute;
+            top: 130px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.85);
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20;
+            text-align: center;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }}
+        #action-banner.show {{
+            opacity: 1;
+            transform: translateX(-50%) scale(1.1);
+        }}
+
+        #boss-guide {{
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 12px 18px;
+            color: #e2e8f0;
+            font-size: 12px;
+            line-height: 1.6;
+            z-index: 10;
+            pointer-events: none;
+        }}
+        .badge {{
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: #38bdf8;
+            font-weight: 700;
+        }}
+        .ult-badge {{
+            background: rgba(245, 158, 11, 0.3);
+            border: 1px solid #f59e0b;
+            color: #fbbf24;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 900;
+        }}
+
+        #hit-overlay {{
+            position: absolute;
+            inset: 0;
+            box-shadow: inset 0 0 60px rgba(239, 68, 68, 0.8);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 30;
+            transition: opacity 0.15s ease;
+        }}
+
+        .full-overlay {{
+            position: absolute;
+            inset: 0;
+            background: rgba(6, 8, 20, 0.94);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            z-index: 100;
+        }}
+
+        #upgrade-modal {{
+            background: rgba(15, 23, 42, 0.96);
+            border: 2px solid #facc15;
+            border-radius: 18px;
+            padding: 28px 36px;
+            width: min(680px, 92vw);
+            text-align: center;
+            box-shadow: 0 0 50px rgba(250, 204, 21, 0.3);
+        }}
+        .upgrade-card-box {{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin: 22px 0 10px 0;
+        }}
+        .upgrade-card {{
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }}
+        .upgrade-card:hover {{
+            transform: translateY(-5px);
+            border-color: #38bdf8;
+            box-shadow: 0 8px 25px rgba(56, 189, 248, 0.4);
+            background: rgba(30, 58, 138, 0.6);
+        }}
+        .card-icon {{ font-size: 32px; margin-bottom: 8px; }}
+        .card-title {{ font-size: 14px; font-weight: 800; color: #f8fafc; margin-bottom: 6px; }}
+        .card-desc {{ font-size: 11px; color: #94a3b8; line-height: 1.4; }}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    </head>
+    <body>
+
+    <div id="hit-overlay"></div>
+    <div id="action-banner"></div>
+
+    <div id="modal-screen" class="full-overlay" style="cursor: pointer;">
+        <h1 id="modal-title" style="font-size: 34px; color: #38bdf8; letter-spacing: 2px; margin-bottom: 12px;">⚔️ SPIDER-MAN BOSS RAID</h1>
+        <p id="modal-desc" style="font-size: 15px; color: #cbd5e1; background: rgba(255, 255, 255, 0.1); padding: 10px 22px; border-radius: 20px;">▶ 화면을 클릭하여 Stage 1 [그린 고블린] 레이드 시작!</p>
+    </div>
+
+    <div id="upgrade-overlay" class="full-overlay" style="display: none;">
+        <div id="upgrade-modal">
+            <h2 style="font-size: 28px; font-weight: 900; color: #facc15; letter-spacing: 1px;">🎉 LEVEL UP & 능력 강화!</h2>
+            <p id="level-reward-desc" style="font-size: 14px; color: #cbd5e1; margin-top: 6px;">빌런을 물리치고 다음 단계로 진화합니다. 강화할 역학 능력을 선택하세요!</p>
+            
+            <div class="upgrade-card-box">
+                <div class="upgrade-card" onclick="chooseUpgrade('dmg')">
+                    <div class="card-icon">💥</div>
+                    <div class="card-title">고분자 인장 강화</div>
+                    <div class="card-desc">거미줄 타격 위력 대폭 증가 (+15 Damage)</div>
+                </div>
+                <div class="upgrade-card" onclick="chooseUpgrade('gauge')">
+                    <div class="card-icon">⚡</div>
+                    <div class="card-title">슈퍼 나노 반응로</div>
+                    <div class="card-desc">명중 시 궁극기 게이지 충전량 2배 (+40% 차지)</div>
+                </div>
+                <div class="upgrade-card" onclick="chooseUpgrade('heal')">
+                    <div class="card-icon">🛡️</div>
+                    <div class="card-title">생체 탄성 슈트</div>
+                    <div class="card-desc">체력 100% 완전 회복 & 이동 기동력 25% 상승</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="player-ui">
+        <div>
+            <div class="bar-label"><span>SPIDER HP</span><span id="player-hp-text">100%</span></div>
+            <div class="bar-bg"><div id="player-hp-bar"></div></div>
+        </div>
+        <div>
+            <div class="bar-label">
+                <span>ULTIMATE WEB BLOSSOM</span>
+                <span id="ult-ready-tag">READY [Q]!</span>
+            </div>
+            <div class="bar-bg"><div id="ult-bar"></div></div>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 4px;">
+            <span class="stat-badge" id="player-lvl-tag">LV 1 스파이더맨</span>
+            <span class="stat-badge" id="player-dmg-tag">웹 위력 10</span>
+        </div>
+    </div>
+
+    <div id="boss-ui">
+        <div class="boss-header">
+            <span id="boss-name-tag">😈 [STAGE 1] GREEN GOBLIN</span>
+            <span id="boss-hp-text">HP 100%</span>
+        </div>
+        <div class="boss-hp-bg"><div id="boss-hp-bar"></div></div>
+        
+        <div class="bind-header">
+            <span>🕸️ 거미줄 포박 진행도 (WEB BINDING)</span>
+            <span id="boss-bind-text">0%</span>
+        </div>
+        <div class="boss-bind-bg"><div id="boss-bind-bar"></div></div>
+    </div>
+
+    <div id="boss-guide">
+        • <span class="badge">좌클릭</span> 마우스 방향 정확 조준 발사 (포박 시 바닥 추락 & 기절!)<br>
+        • <span class="ult-badge">Q / 우클릭</span> 궁극기 [웹 블라섬] 발동 | <span class="badge">벽면 W</span> 수직 벽타기<br>
+        • 적 격파 시 <b>레벨업 & 상위 빌런(일렉트로, 베놈)</b> 순차 소환!
+    </div>
+
+    <div id="boss-canvas" tabindex="0"></div>
+
+    <script>
+        const container = document.getElementById('boss-canvas');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x060814);
+        scene.fog = new THREE.FogExp2(0x060814, 0.007);
+
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 900);
+        const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        scene.add(new THREE.HemisphereLight(0x38bdf8, 0x1e1b4b, 0.8));
+        const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+        dirLight.position.set(50, 120, 60);
+        scene.add(dirLight);
+
+        const arena = new THREE.Mesh(
+            new THREE.BoxGeometry(140, 4, 140),
+            new THREE.MeshStandardMaterial({{ color: 0x1e293b, roughness: 0.6 }})
+        );
+        arena.position.y = -2;
+        scene.add(arena);
+
+        const climbBuildings = [];
+        const towerGeo = new THREE.BoxGeometry(18, 55, 18);
+        const towerMat = new THREE.MeshStandardMaterial({{ color: 0x334155, roughness: 0.4 }});
+        const towerPositions = [
+            [-35, 27.5, -35], [35, 27.5, -35],
+            [-35, 27.5, 35],  [35, 27.5, 35]
+        ];
+        towerPositions.forEach(pos => {{
+            const tower = new THREE.Mesh(towerGeo, towerMat);
+            tower.position.set(pos[0], pos[1], pos[2]);
+            scene.add(tower);
+            climbBuildings.push({{
+                minX: pos[0] - 9.5, maxX: pos[0] + 9.5,
+                minZ: pos[2] - 9.5, maxZ: pos[2] + 9.5,
+                topY: 55
+            }});
+        }});
+
+        const playerGroup = new THREE.Group();
+        scene.add(playerGroup);
+
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), new THREE.MeshStandardMaterial({{ color: 0xdc2626 }}));
+        torso.position.y = 0.9;
+        playerGroup.add(torso);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({{ color: 0xdc2626 }}));
+        head.position.y = 1.75;
+        playerGroup.add(head);
+
+        const legs = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.45), new THREE.MeshStandardMaterial({{ color: 0x2563eb }}));
+        legs.position.y = 0.35;
+        playerGroup.add(legs);
+
+        const player = {{
+            pos: new THREE.Vector3(0, 0, 30),
+            vel: new THREE.Vector3(),
+            hp: 100,
+            maxHp: 100,
+            level: 1,
+            damage: 10,
+            ultPerHit: 20,
+            speedMulti: 1.0,
+            ultGauge: 0,
+            isGrounded: true,
+            isWallClimbing: false,
+            invulnerableTime: 2.0
+        }};
+
+        let currentStage = 1;
+        const STAGE_CONFIG = {{
+            1: {{
+                name: "😈 [STAGE 1] GREEN GOBLIN",
+                color: 0x16a34a,
+                accentColor: 0x22c55e,
+                speed: 0.45,
+                attackInterval: 3.0,
+                bombColor: 0xea580c,
+                bindPerHit: 25,
+                desc: "호박 폭탄을 투척하는 공중 글라이더 보스"
+            }},
+            2: {{
+                name: "⚡ [STAGE 2] ELECTRO",
+                color: 0x0284c7,
+                accentColor: 0x38bdf8,
+                speed: 0.85,
+                attackInterval: 1.8,
+                bombColor: 0x06b6d4,
+                bindPerHit: 18,
+                desc: "고속 회피 기동과 고전압 플라즈마를 난사하는 번개 보스"
+            }},
+            3: {{
+                name: "🕷️ [STAGE 3] SYMBIOTE VENOM",
+                color: 0x0f172a,
+                accentColor: 0x475569,
+                speed: 0.65,
+                attackInterval: 1.2,
+                bombColor: 0x881337,
+                bindPerHit: 12,
+                desc: "거대한 덩치와 무시무시한 심비오트 유도 탄환을 뿜어내는 최종 보스"
+            }}
+        }};
+
+        const bossGroup = new THREE.Group();
+        scene.add(bossGroup);
+
+        const gliderMesh = new THREE.Mesh(
+            new THREE.ConeGeometry(3.5, 6.5, 3),
+            new THREE.MeshStandardMaterial({{ color: 0x475569, metalness: 0.8, roughness: 0.2 }})
+        );
+        gliderMesh.rotation.x = Math.PI / 2;
+        gliderMesh.scale.set(1.5, 0.4, 0.8);
+        bossGroup.add(gliderMesh);
+
+        const bossBodyMat = new THREE.MeshStandardMaterial({{ color: 0x16a34a }});
+        const bossBody = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1.5, 12), bossBodyMat);
+        bossBody.position.y = 1.0;
+        bossGroup.add(bossBody);
+
+        const bossHeadMat = new THREE.MeshStandardMaterial({{ color: 0x22c55e }});
+        const bossHead = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 12), bossHeadMat);
+        bossHead.position.y = 2.0;
+        bossGroup.add(bossHead);
+
+        const webTrapGroup = new THREE.Group();
+        const webLineMat = new THREE.LineBasicMaterial({{ color: 0xffffff, linewidth: 3 }});
+        for (let i = 0; i < 14; i++) {{
+            const p1 = new THREE.Vector3((Math.random()-0.5)*3.2, (Math.random()-0.5)*3.2 + 1, (Math.random()-0.5)*3.2);
+            const p2 = new THREE.Vector3((Math.random()-0.5)*3.2, (Math.random()-0.5)*3.2 + 1, (Math.random()-0.5)*3.2);
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+            webTrapGroup.add(new THREE.Line(lineGeo, webLineMat));
+        }}
+        webTrapGroup.visible = false;
+        bossGroup.add(webTrapGroup);
+
+        const boss = {{
+            pos: new THREE.Vector3(0, 12, -18),
+            hp: 100,
+            bindMeter: 0,
+            stunTimer: 0,
+            angle: 0,
+            attackTimer: 0
+        }};
+
+        const webBullets = [];
+        const webBulletGeo = new THREE.SphereGeometry(0.65, 12, 12);
+        const webBulletMat = new THREE.MeshBasicMaterial({{ color: 0xffffff }});
+
+        const bossProjectiles = [];
+        const projGeo = new THREE.SphereGeometry(0.65, 12, 12);
+
+        let isStarted = false;
+        let isGameOver = false;
+        let isUpgrading = false;
+        let yaw = 0, pitch = 0.15;
+        let isRightDragging = false;
+        let startX = 0, startY = 0;
+        const keys = {{}};
+
+        const modalScreen = document.getElementById('modal-screen');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+        const upgradeOverlay = document.getElementById('upgrade-overlay');
+        const bossNameTag = document.getElementById('boss-name-tag');
+        const bossHpBar = document.getElementById('boss-hp-bar');
+        const bossHpText = document.getElementById('boss-hp-text');
+        const bossBindBar = document.getElementById('boss-bind-bar');
+        const bossBindText = document.getElementById('boss-bind-text');
+        const playerHpBar = document.getElementById('player-hp-bar');
+        const playerHpText = document.getElementById('player-hp-text');
+        const ultBar = document.getElementById('ult-bar');
+        const ultReadyTag = document.getElementById('ult-ready-tag');
+        const hitOverlay = document.getElementById('hit-overlay');
+        const actionBanner = document.getElementById('action-banner');
+
+        function showBanner(text, color) {{
+            actionBanner.innerText = text;
+            actionBanner.style.color = color;
+            actionBanner.classList.add('show');
+            setTimeout(() => {{ actionBanner.classList.remove('show'); }}, 1200);
+        }}
+
+        function setupBossStage(stage) {{
+            const cfg = STAGE_CONFIG[stage];
+            bossNameTag.innerText = cfg.name;
+            bossBodyMat.color.setHex(cfg.color);
+            bossHeadMat.color.setHex(cfg.accentColor);
+
+            if (stage === 3) {{
+                bossGroup.scale.set(1.5, 1.5, 1.5);
+            }} else {{
+                bossGroup.scale.set(1.0, 1.0, 1.0);
+            }}
+
+            boss.hp = 100;
+            boss.bindMeter = 0;
+            boss.stunTimer = 0;
+            boss.pos.set(0, 12, -18);
+            bossGroup.position.copy(boss.pos);
+            webTrapGroup.visible = false;
+
+            bossHpBar.style.width = '100%';
+            bossHpText.innerText = 'HP 100%';
+            bossBindBar.style.width = '0%';
+            bossBindText.innerText = '0%';
+        }}
+
+        modalScreen.addEventListener('click', () => {{
+            if (isGameOver) {{
+                currentStage = 1;
+                player.level = 1;
+                player.damage = 10;
+                player.ultPerHit = 20;
+                player.speedMulti = 1.0;
+                document.getElementById('player-lvl-tag').innerText = 'LV 1 스파이더맨';
+                document.getElementById('player-dmg-tag').innerText = '웹 위력 10';
+            }}
+            setupBossStage(currentStage);
+
+            player.hp = 100;
+            player.ultGauge = 0;
+            player.pos.set(0, 0, 30);
+            player.vel.set(0, 0, 0);
+            player.invulnerableTime = 2.0;
+
+            webBullets.forEach(b => scene.remove(b.mesh));
+            bossProjectiles.forEach(b => scene.remove(b.mesh));
+            webBullets.length = 0;
+            bossProjectiles.length = 0;
+
+            playerHpBar.style.width = '100%';
+            playerHpText.innerText = '100%';
+            ultBar.style.width = '0%';
+            ultReadyTag.style.display = 'none';
+
+            modalScreen.style.display = 'none';
+            isGameOver = false;
+            isStarted = true;
+            container.focus();
+        }});
+
+        window.chooseUpgrade = function(type) {{
+            player.level++;
+            document.getElementById('player-lvl-tag').innerText = `LV ${{player.level}} 스파이더맨`;
+
+            if (type === 'dmg') {{
+                player.damage += 15;
+                document.getElementById('player-dmg-tag').innerText = `웹 위력 ${{player.damage}}`;
+                showBanner("🔥 공격력 대폭 강화! (+15 DMG)", "#38bdf8");
+            }} else if (type === 'gauge') {{
+                player.ultPerHit += 20;
+                showBanner("⚡ 궁극기 고속 충전 장착!", "#facc15");
+            }} else if (type === 'heal') {{
+                player.hp = 100;
+                player.speedMulti += 0.25;
+                playerHpBar.style.width = '100%';
+                playerHpText.innerText = '100%';
+                showBanner("🛡️ HP 100% 회복 & 기동력 상승!", "#22c55e");
+            }}
+
+            upgradeOverlay.style.display = 'none';
+            isUpgrading = false;
+
+            currentStage++;
+            setupBossStage(currentStage);
+            showBanner(`⚔️ ${{STAGE_CONFIG[currentStage].name}} 출현!`, "#ef4444");
+            container.focus();
+        }};
+
+        window.addEventListener('keydown', (e) => {{
+            keys[e.code] = true;
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+            if (e.code === 'KeyQ') fireUltimate();
+        }});
+        window.addEventListener('keyup', (e) => {{ keys[e.code] = false; }});
+
+        container.addEventListener('mousedown', (e) => {{
+            container.focus();
+            if (e.button === 0) {{
+                if (isStarted && !isGameOver && !isUpgrading) shootWebBullet();
+            }} else if (e.button === 2) {{
+                fireUltimate();
+            }}
+            isRightDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+        }});
+
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        window.addEventListener('mousemove', (e) => {{
+            if (!isRightDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            startX = e.clientX;
+            startY = e.clientY;
+            yaw -= dx * 0.005;
+            pitch = Math.max(-0.4, Math.min(0.9, pitch + dy * 0.005));
+        }});
+
+        window.addEventListener('mouseup', () => {{ isRightDragging = false; }});
+
+        function shootWebBullet() {{
+            const shootDir = new THREE.Vector3();
+            camera.getWorldDirection(shootDir);
+
+            const bullet = new THREE.Mesh(webBulletGeo, webBulletMat);
+            bullet.position.set(player.pos.x, player.pos.y + 1.2, player.pos.z);
+            scene.add(bullet);
+
+            webBullets.push({{
+                mesh: bullet,
+                vel: shootDir.multiplyScalar(140.0),
+                life: 2.5
+            }});
+        }}
+
+        function fireUltimate() {{
+            if (!isStarted || isGameOver || isUpgrading || player.ultGauge < 100) return;
+            player.ultGauge = 0;
+            ultBar.style.width = '0%';
+            ultReadyTag.style.display = 'none';
+
+            showBanner("💥 WEB BLOSSOM ULTIMATE! 💥", "#facc15");
+            player.vel.y = 22.0;
+
+            for (let i = 0; i < 28; i++) {{
+                const angle = (i / 28) * Math.PI * 2;
+                const dir = new THREE.Vector3(Math.cos(angle), (Math.random()-0.3)*0.8, Math.sin(angle)).normalize();
+                const bullet = new THREE.Mesh(webBulletGeo, new THREE.MeshBasicMaterial({{ color: 0x38bdf8 }}));
+                bullet.position.set(player.pos.x, player.pos.y + 1.5, player.pos.z);
+                scene.add(bullet);
+
+                webBullets.push({{
+                    mesh: bullet,
+                    vel: dir.multiplyScalar(110.0),
+                    life: 3.5,
+                    isUlt: true
+                }});
+            }}
+        }}
+
+        function triggerPlayerHit() {{
+            hitOverlay.style.opacity = '1';
+            setTimeout(() => {{ hitOverlay.style.opacity = '0'; }}, 180);
+        }}
+
+        function checkWallClimb() {{
+            player.isWallClimbing = false;
+            for (let t of climbBuildings) {{
+                const isNearX = (player.pos.x >= t.minX - 1.8 && player.pos.x <= t.maxX + 1.8);
+                const isNearZ = (player.pos.z >= t.minZ - 1.8 && player.pos.z <= t.maxZ + 1.8);
+                if (isNearX && isNearZ && player.pos.y < t.topY) {{
+                    if (keys['KeyW'] || keys['Space'] || keys['ArrowUp']) {{
+                        player.isWallClimbing = true;
+                        player.vel.y = 34.0;
+                        player.vel.x *= 0.3;
+                        player.vel.z *= 0.3;
+                        return;
+                    }}
+                }}
+            }}
+        }}
+
+        const clock = new THREE.Clock();
+
+        function battleLoop() {{
+            requestAnimationFrame(battleLoop);
+            const delta = Math.min(clock.getDelta(), 0.05);
+
+            if (!isStarted || isGameOver || isUpgrading) {{
+                renderer.render(scene, camera);
+                return;
+            }}
+
+            if (player.invulnerableTime > 0) player.invulnerableTime -= delta;
+
+            const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
+            const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
+
+            const move = new THREE.Vector3();
+            if (keys['KeyW'] || keys['ArrowUp']) move.add(forward);
+            if (keys['KeyS'] || keys['ArrowDown']) move.sub(forward);
+            if (keys['KeyD'] || keys['ArrowRight']) move.add(right);
+            if (keys['KeyA'] || keys['ArrowLeft']) move.sub(right);
+
+            if (move.lengthSq() > 0) {{
+                move.normalize();
+                const spd = 95.0 * player.speedMulti;
+                player.vel.x += move.x * spd * delta;
+                player.vel.z += move.z * spd * delta;
+            }}
+
+            checkWallClimb();
+
+            if (!player.isWallClimbing) player.vel.y -= 38.0 * delta;
+
+            const damp = player.isGrounded ? 7.0 : 2.0;
+            player.vel.x *= Math.max(0, 1 - damp * delta);
+            player.vel.z *= Math.max(0, 1 - damp * delta);
+
+            if (keys['Space'] && player.isGrounded) {{
+                player.vel.y = 22.0;
+                player.isGrounded = false;
+            }}
+
+            player.pos.addScaledVector(player.vel, delta);
+
+            if (player.pos.y <= 0) {{
+                player.pos.y = 0;
+                player.vel.y = 0;
+                player.isGrounded = true;
+            }}
+            player.pos.x = Math.max(-62, Math.min(62, player.pos.x));
+            player.pos.z = Math.max(-62, Math.min(62, player.pos.z));
+            playerGroup.position.copy(player.pos);
+
+            const cfg = STAGE_CONFIG[currentStage];
+            if (boss.stunTimer > 0) {{
+                boss.stunTimer -= delta;
+                boss.pos.y = Math.max(1.0, boss.pos.y - 20.0 * delta);
+                webTrapGroup.visible = true;
+                bossGroup.position.copy(boss.pos);
+
+                if (boss.stunTimer <= 0) {{
+                    webTrapGroup.visible = false;
+                    boss.bindMeter = 0;
+                    bossBindBar.style.width = '0%';
+                    bossBindText.innerText = '0%';
+                }}
+            }} else {{
+                boss.angle += delta * cfg.speed;
+                boss.pos.x = Math.sin(boss.angle) * (currentStage === 2 ? 32 : 26);
+                boss.pos.z = Math.cos(boss.angle) * 22 - 6;
+                boss.pos.y = 11 + Math.sin(boss.angle * 1.8) * 3.0;
+                bossGroup.position.copy(boss.pos);
+                bossGroup.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
+
+                boss.attackTimer += delta;
+                if (boss.attackTimer > cfg.attackInterval) {{
+                    boss.attackTimer = 0;
+                    const pMat = new THREE.MeshStandardMaterial({{ color: cfg.bombColor, emissive: cfg.bombColor, emissiveIntensity: 0.8 }});
+                    const bomb = new THREE.Mesh(projGeo, pMat);
+                    bomb.position.copy(boss.pos);
+                    scene.add(bomb);
+
+                    const toPlayer = new THREE.Vector3().subVectors(player.pos, boss.pos).normalize();
+                    bossProjectiles.push({{
+                        mesh: bomb,
+                        vel: toPlayer.multiplyScalar(currentStage === 2 ? 28.0 : 22.0),
+                        life: 6.0
+                    }});
+                }}
+            }}
+
+            for (let i = webBullets.length - 1; i >= 0; i--) {{
+                const b = webBullets[i];
+                b.mesh.position.addScaledVector(b.vel, delta);
+                b.life -= delta;
+
+                const hitRange = currentStage === 3 ? 5.2 : 3.8;
+                if (b.mesh.position.distanceTo(boss.pos) < hitRange) {{
+                    const dmg = b.isUlt ? (player.damage * 2.5) : player.damage;
+                    boss.hp = Math.max(0, boss.hp - dmg);
+                    bossHpBar.style.width = boss.hp + '%';
+                    bossHpText.innerText = 'HP ' + Math.round(boss.hp) + '%';
+
+                    boss.bindMeter = Math.min(100, boss.bindMeter + (b.isUlt ? 60 : cfg.bindPerHit));
+                    bossBindBar.style.width = boss.bindMeter + '%';
+                    bossBindText.innerText = boss.bindMeter + '%';
+
+                    if (boss.bindMeter >= 100 && boss.stunTimer <= 0) {{
+                        boss.stunTimer = 5.0;
+                        showBanner("🕸️ 보스 완전 포박! 5초간 기절! 🕸️", "#38bdf8");
+                    }}
+
+                    player.ultGauge = Math.min(100, player.ultGauge + player.ultPerHit);
+                    ultBar.style.width = player.ultGauge + '%';
+                    if (player.ultGauge >= 100) ultReadyTag.style.display = 'inline';
+
+                    scene.remove(b.mesh);
+                    webBullets.splice(i, 1);
+
+                    if (boss.hp <= 0) {{
+                        if (currentStage < 3) {{
+                            isUpgrading = true;
+                            upgradeOverlay.style.display = 'flex';
+                            document.getElementById('level-reward-desc').innerText = `${{cfg.name}} 처치 완료! 다음 보스전을 위해 능력을 업그레이드하세요.`;
+                        }} else {{
+                            isGameOver = true;
+                            modalTitle.innerText = "🏆 ALL BOSSES DEFEATED!";
+                            modalTitle.style.color = "#22c55e";
+                            modalDesc.innerText = "그린 고블린, 일렉트로, 베놈까지 뉴욕시의 모든 빌런을 소탕했습니다! 다시 도전하려면 클릭하세요.";
+                            modalScreen.style.display = 'flex';
+                        }}
+                    }}
+                    continue;
+                }}
+
+                if (b.life <= 0) {{
+                    scene.remove(b.mesh);
+                    webBullets.splice(i, 1);
+                }}
+            }}
+
+            for (let i = bossProjectiles.length - 1; i >= 0; i--) {{
+                const pb = bossProjectiles[i];
+                pb.mesh.position.addScaledVector(pb.vel, delta);
+                pb.life -= delta;
+
+                if (pb.mesh.position.distanceTo(player.pos) < 2.0) {{
+                    if (player.invulnerableTime <= 0) {{
+                        const hitDmg = currentStage === 3 ? 20 : 14;
+                        player.hp = Math.max(0, player.hp - hitDmg);
+                        playerHpBar.style.width = player.hp + '%';
+                        playerHpText.innerText = Math.round(player.hp) + '%';
+                        triggerPlayerHit();
+
+                        if (player.hp <= 0) {{
+                            isGameOver = true;
+                            modalTitle.innerText = "💀 MISSION FAILED";
+                            modalTitle.style.color = "#ef4444";
+                            modalDesc.innerText = `${{cfg.name}}에게 쓰러졌습니다. 다시 도전하려면 클릭하세요!`;
+                            modalScreen.style.display = 'flex';
+                        }}
+                    }}
+                    scene.remove(pb.mesh);
+                    bossProjectiles.splice(i, 1);
+                    continue;
+                }}
+
+                if (pb.life <= 0) {{
+                    scene.remove(pb.mesh);
+                    bossProjectiles.splice(i, 1);
+                }}
+            }}
+
+            const camDist = 7.5;
+            const camH = 3.0;
+            camera.position.set(
+                player.pos.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
+                player.pos.y + Math.sin(pitch) * camDist + camH,
+                player.pos.z + Math.cos(yaw) * Math.cos(pitch) * camDist
+            );
+            camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
+
+            renderer.render(scene, camera);
+        }}
+
+        window.addEventListener('resize', () => {{
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }});
+
+        battleLoop();
+    </script>
+    </body>
+    </html>
+    """
+
+    components.html(boss_html, height=750, scrolling=False)
