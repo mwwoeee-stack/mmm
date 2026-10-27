@@ -10,42 +10,49 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 상단 흰색 여백, 로딩바, 헤더 툴바 및 내부 컨테이너 패딩 강제 제거
+# 상단 UI 여백 및 탭 클릭 버그 해결 CSS
 st.markdown("""
 <style>
-    /* 1. 상단 Streamlit 헤더 및 툴바 완전 제거 */
     header[data-testid="stHeader"] {
-        display: none !important;
+        background: transparent !important;
+        height: 0rem !important;
+        pointer-events: none !important;
     }
     
-    /* 2. 최상단 컨테이너 패딩 및 마진 강제 0 */
     .stAppViewContainer, .main, .block-container {
-        padding-top: 0 !important;
-        margin-top: 0 !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0 !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
         max-width: 100% !important;
     }
     
-    /* 3. 탭 바를 상단 맨 끝으로 밀착 */
     div[data-testid="stTabs"] {
+        position: relative !important;
+        z-index: 1000 !important;
         margin-top: 0 !important;
-        padding-top: 0 !important;
     }
     
     div[data-baseweb="tab-list"] {
-        padding: 0 !important;
-        margin: 0 !important;
+        position: relative !important;
+        z-index: 1001 !important;
+        pointer-events: auto !important;
+        gap: 8px !important;
+    }
+
+    button[data-baseweb="tab"] {
+        pointer-events: auto !important;
+        cursor: pointer !important;
     }
 
     div[data-baseweb="tab-panel"] {
-        padding: 0 !important;
-        margin: 0 !important;
+        padding-top: 0.4rem !important;
     }
 
-    /* 4. iframe 래퍼의 상단 빈 공간 강제 삭제 */
     div[data-testid="stCustomComponentV1"] {
-        margin-top: -10px !important;
+        position: relative !important;
+        z-index: 1 !important;
+        margin-top: 0 !important;
         padding: 0 !important;
     }
 
@@ -347,6 +354,7 @@ with tab_game:
             pointer-events: none;
             z-index: 15;
             transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center;
         }}
         #stunt-alert.show {{
             opacity: 1;
@@ -384,6 +392,43 @@ with tab_game:
             border-radius: 4px;
             font-weight: 700;
             color: #38bdf8;
+        }}
+
+        /* 우측 하단 레이더 미니맵 */
+        #minimap-wrapper {{
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            z-index: 20;
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid rgba(56, 189, 248, 0.4);
+            border-radius: 50%;
+            width: 140px;
+            height: 140px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 12px rgba(56, 189, 248, 0.2);
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+        }}
+        #minimap-canvas {{
+            width: 100%;
+            height: 100%;
+            display: block;
+        }}
+        #minimap-label {{
+            position: absolute;
+            bottom: 160px;
+            right: 32px;
+            z-index: 20;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.8);
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }}
 
         .overlay-screen {{
@@ -443,13 +488,13 @@ with tab_game:
 
     <div id="start-overlay" class="overlay-screen" style="cursor: pointer;">
         <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 8px; color: #ef4444; letter-spacing: 1px;">🕷️ SPIDER-MAN 3D CITY</h1>
-        <p style="font-size: 14px; color: #cbd5e1; background: rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 20px;">▶ 클릭하여 비행 시작 (종료 시 물리 분석 리포트 제공)</p>
+        <p style="font-size: 14px; color: #cbd5e1; background: rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 20px;">▶ 클릭하여 비행 시작 (골든 링 10개 수집 시 분석 리포트 자동 완료)</p>
     </div>
 
     <div id="report-overlay" class="overlay-screen" style="display: none;">
         <div id="report-modal">
-            <h2 style="font-size: 24px; font-weight: 900; color: #f8fafc; letter-spacing: 1px;">📊 비행 역학 분석 리포트</h2>
-            <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">기준 질량: 스파이더맨 m = 65.0 kg | 완충 지속 시간: Δt = 0.05 s</p>
+            <h2 id="report-title" style="font-size: 24px; font-weight: 900; color: #f8fafc; letter-spacing: 1px;">📊 비행 역학 분석 리포트</h2>
+            <p id="report-desc" style="font-size: 12px; color: #94a3b8; margin-top: 4px;">기준 질량: 스파이더맨 m = 65.0 kg | 완충 지속 시간: Δt = 0.05 s</p>
             
             <div class="report-grid">
                 <div class="report-card">
@@ -505,7 +550,13 @@ with tab_game:
     <div id="controls-guide">
         • <span class="key-badge">건물 클릭</span> 웹스윙 견인 | <span class="key-badge">W,A,S,D</span> 방향 조타<br>
         • <span class="key-badge">Space</span> 점프 | <span class="key-badge">더블 Space</span> <b>공중제비 슈퍼점프</b><br>
-        • 우측 상단 <b>[비행 종료]</b> 클릭 시 역학 분석 리포트 팝업
+        • <b>우측 하단 레이더</b>에서 노란 점(골든 링)을 확인하고 이동하세요!
+    </div>
+
+    <!-- 우측 하단 레이더 미니맵 -->
+    <div id="minimap-label">📡 CITY RADAR</div>
+    <div id="minimap-wrapper">
+        <canvas id="minimap-canvas" width="200" height="200"></canvas>
     </div>
 
     <div id="canvas-container" tabindex="0"></div>
@@ -569,7 +620,6 @@ with tab_game:
         winTexture.wrapT = THREE.RepeatWrapping;
 
         const bldgMat = new THREE.MeshStandardMaterial({{ map: winTexture, roughness: 0.35, metalness: 0.3 }});
-        const roofMat = new THREE.MeshStandardMaterial({{ color: 0x334155, roughness: 0.8 }});
 
         const CITY_SIZE = 10;
         const SPACING = 42;
@@ -603,12 +653,50 @@ with tab_game:
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
+        // ==================== [골든 링: 건물 외부 및 트인 시야 생성 로직] ====================
         const rings = [];
-        const ringGeo = new THREE.TorusGeometry(3.5, 0.4, 10, 20);
-        const ringMat = new THREE.MeshBasicMaterial({{ color: 0xfacc15, wireframe: true }});
+        const ringGeo = new THREE.TorusGeometry(3.6, 0.45, 14, 28);
+        const ringMat = new THREE.MeshStandardMaterial({{ 
+            color: 0xfacc15, 
+            emissive: 0xeab308, 
+            emissiveIntensity: 0.8,
+            roughness: 0.2, 
+            metalness: 0.8 
+        }});
+
+        function getSafeRingPosition() {{
+            for (let attempt = 0; attempt < 100; attempt++) {{
+                const isRooftop = Math.random() > 0.45;
+                let candidateX = (Math.random() - 0.5) * 260;
+                let candidateZ = (Math.random() - 0.5) * 260;
+                let candidateY = 22 + Math.random() * 30;
+
+                let overlappingBuilding = null;
+                for (let b of buildingColliders) {{
+                    if (candidateX >= b.minX - 3.5 && candidateX <= b.maxX + 3.5 &&
+                        candidateZ >= b.minZ - 3.5 && candidateZ <= b.maxZ + 3.5) {{
+                        overlappingBuilding = b;
+                        break;
+                    }}
+                }}
+
+                if (overlappingBuilding) {{
+                    if (isRooftop) {{
+                        candidateY = overlappingBuilding.topY + 6.0 + Math.random() * 8.0;
+                        return new THREE.Vector3(candidateX, candidateY, candidateZ);
+                    }}
+                }} else {{
+                    return new THREE.Vector3(candidateX, candidateY, candidateZ);
+                }}
+            }}
+            return new THREE.Vector3((Math.random() - 0.5) * 60, 28 + Math.random() * 20, (Math.random() - 0.5) * 60);
+        }}
+
         for (let i = 0; i < 10; i++) {{
             const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.position.set((Math.random() - 0.5) * 220, 25 + Math.random() * 45, (Math.random() - 0.5) * 220);
+            const pos = getSafeRingPosition();
+            ring.position.copy(pos);
+            ring.userData = {{ baseY: pos.y, phase: Math.random() * Math.PI * 2 }};
             scene.add(ring);
             rings.push(ring);
         }}
@@ -659,6 +747,119 @@ with tab_game:
         const reportOverlay = document.getElementById('report-overlay');
         const endBtn = document.getElementById('end-game-btn');
         const restartBtn = document.getElementById('restart-btn');
+        const stuntAlert = document.getElementById('stunt-alert');
+        const hitVignette = document.getElementById('hit-vignette');
+        let alertTimeout = null;
+
+        // 레이더 미니맵 2D 컨텍스트
+        const minimapCanvas = document.getElementById('minimap-canvas');
+        const miniCtx = minimapCanvas.getContext('2d');
+        const RADAR_RADIUS = 100;
+        const WORLD_MAP_SIZE = 300.0; // 미니맵에 표시할 도시 월드 반경 (±150m)
+
+        function renderMinimap() {{
+            miniCtx.clearRect(0, 0, 200, 200);
+
+            // 레이더 베이스 배경 원형
+            miniCtx.save();
+            miniCtx.beginPath();
+            miniCtx.arc(100, 100, 96, 0, Math.PI * 2);
+            miniCtx.fillStyle = 'rgba(10, 17, 40, 0.75)';
+            miniCtx.fill();
+            miniCtx.clip();
+
+            // 거리 가이드 원
+            miniCtx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
+            miniCtx.lineWidth = 1;
+            miniCtx.beginPath();
+            miniCtx.arc(100, 100, 48, 0, Math.PI * 2);
+            miniCtx.stroke();
+            miniCtx.beginPath();
+            miniCtx.arc(100, 100, 94, 0, Math.PI * 2);
+            miniCtx.stroke();
+
+            // 십자선 가이드
+            miniCtx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+            miniCtx.beginPath();
+            miniCtx.moveTo(100, 5); miniCtx.lineTo(100, 195);
+            miniCtx.moveTo(5, 100); miniCtx.lineTo(195, 100);
+            miniCtx.stroke();
+
+            // 골든 링 위치 렌더링 (노란색 점)
+            rings.forEach(ring => {{
+                if (ring.visible) {{
+                    const rx = 100 + (ring.position.x / WORLD_MAP_SIZE) * 170;
+                    const rz = 100 + (ring.position.z / WORLD_MAP_SIZE) * 170;
+
+                    // 링 발광 효과
+                    miniCtx.beginPath();
+                    miniCtx.arc(rx, rz, 4.5, 0, Math.PI * 2);
+                    miniCtx.fillStyle = '#facc15';
+                    miniCtx.shadowColor = '#facc15';
+                    miniCtx.shadowBlur = 8;
+                    miniCtx.fill();
+                    miniCtx.shadowBlur = 0;
+                }}
+            }});
+
+            // 플레이어 마커 렌더링 (붉은 점 및 시선 방향)
+            const px = 100 + (player.pos.x / WORLD_MAP_SIZE) * 170;
+            const pz = 100 + (player.pos.z / WORLD_MAP_SIZE) * 170;
+
+            // 시선 방향 콘 표시
+            miniCtx.save();
+            miniCtx.translate(px, pz);
+            miniCtx.rotate(-yaw);
+
+            miniCtx.beginPath();
+            miniCtx.moveTo(0, -9);
+            miniCtx.lineTo(-4.5, 4);
+            miniCtx.lineTo(4.5, 4);
+            miniCtx.closePath();
+            miniCtx.fillStyle = '#ef4444';
+            miniCtx.shadowColor = '#ef4444';
+            miniCtx.shadowBlur = 6;
+            miniCtx.fill();
+            miniCtx.shadowBlur = 0;
+            miniCtx.restore();
+
+            miniCtx.restore();
+        }}
+
+        function triggerBanner(text, color = '#facc15', duration = 1200) {{
+            stuntAlert.innerHTML = text;
+            stuntAlert.style.color = color;
+            stuntAlert.classList.add('show');
+            if (alertTimeout) clearTimeout(alertTimeout);
+            alertTimeout = setTimeout(() => {{ stuntAlert.classList.remove('show'); }}, duration);
+        }}
+
+        function openReport(isComplete = false) {{
+            isSimRunning = false;
+            player.vel.set(0, 0, 0);
+            webLine.visible = false;
+
+            const repTitle = document.getElementById('report-title');
+            const repDesc = document.getElementById('report-desc');
+            if (isComplete) {{
+                repTitle.innerHTML = "🏆 MISSION COMPLETE! 비행 역학 분석 리포트";
+                repTitle.style.color = "#facc15";
+                repDesc.innerHTML = "🎉 축하합니다! 모든 골든 링(10/10)을 수집하여 도심 순찰 임무를 완수했습니다.";
+            }} else {{
+                repTitle.innerHTML = "📊 비행 역학 분석 리포트";
+                repTitle.style.color = "#f8fafc";
+                repDesc.innerHTML = "기준 질량: 스파이더맨 m = 65.0 kg | 완충 지속 시간: Δt = 0.05 s";
+            }}
+
+            document.getElementById('rep-max-speed').innerHTML = `${{(physicsLogger.maxSpeed * 3.6).toFixed(1)}} <span>km/h</span>`;
+            document.querySelector('#rep-max-speed + .report-formula').innerText = `v_max (SI: ${{physicsLogger.maxSpeed.toFixed(2)}} m/s)`;
+            document.getElementById('rep-max-p').innerHTML = `${{physicsLogger.maxMomentum.toFixed(1)}} <span>kg·m/s</span>`;
+            document.getElementById('rep-max-impulse').innerHTML = `${{physicsLogger.maxImpulse.toFixed(1)}} <span>N·s</span>`;
+            document.getElementById('rep-max-force').innerHTML = `${{physicsLogger.maxForce.toFixed(1)}} <span>N</span>`;
+            document.getElementById('rep-max-ke').innerHTML = `${{physicsLogger.maxKineticEnergy.toFixed(1)}} <span>J</span>`;
+
+            reportOverlay.style.display = 'flex';
+        }}
 
         overlay.addEventListener('click', () => {{
             overlay.style.opacity = '0';
@@ -669,18 +870,7 @@ with tab_game:
         }});
 
         endBtn.addEventListener('click', () => {{
-            isSimRunning = false;
-            player.vel.set(0, 0, 0);
-            webLine.visible = false;
-
-            document.getElementById('rep-max-speed').innerHTML = `${{(physicsLogger.maxSpeed * 3.6).toFixed(1)}} <span>km/h</span>`;
-            document.querySelector('#rep-max-speed + .report-formula').innerText = `v_max (SI: ${{physicsLogger.maxSpeed.toFixed(2)}} m/s)`;
-            document.getElementById('rep-max-p').innerHTML = `${{physicsLogger.maxMomentum.toFixed(1)}} <span>kg·m/s</span>`;
-            document.getElementById('rep-max-impulse').innerHTML = `${{physicsLogger.maxImpulse.toFixed(1)}} <span>N·s</span>`;
-            document.getElementById('rep-max-force').innerHTML = `${{physicsLogger.maxForce.toFixed(1)}} <span>N</span>`;
-            document.getElementById('rep-max-ke').innerHTML = `${{physicsLogger.maxKineticEnergy.toFixed(1)}} <span>J</span>`;
-
-            reportOverlay.style.display = 'flex';
+            openReport(false);
         }});
 
         restartBtn.addEventListener('click', () => {{
@@ -689,7 +879,12 @@ with tab_game:
             player.vel.set(0, 0, 0);
             ringCount = 0;
             document.getElementById('ring-score').innerHTML = `0 <span>/ 10</span>`;
-            rings.forEach(r => r.visible = true);
+            rings.forEach(r => {{
+                const newPos = getSafeRingPosition();
+                r.position.copy(newPos);
+                r.userData.baseY = newPos.y;
+                r.visible = true;
+            }});
             physicsLogger.reset();
             isSimRunning = true;
             container.focus();
@@ -697,15 +892,6 @@ with tab_game:
 
         const keys = {{}};
         let lastSpaceTime = 0;
-        const stuntAlert = document.getElementById('stunt-alert');
-        const hitVignette = document.getElementById('hit-vignette');
-        let alertTimeout = null;
-
-        function triggerStuntAlert() {{
-            stuntAlert.classList.add('show');
-            if (alertTimeout) clearTimeout(alertTimeout);
-            alertTimeout = setTimeout(() => {{ stuntAlert.classList.remove('show'); }}, 800);
-        }}
 
         function triggerHitEffect() {{
             hitVignette.style.opacity = '1';
@@ -735,7 +921,7 @@ with tab_game:
                         player.canDoubleJump = false;
                         player.isFlipping = true;
                         player.flipProgress = 0;
-                        triggerStuntAlert();
+                        triggerBanner("✨ ACROBATIC FLIP! ✨");
                     }}
                 }}
                 lastSpaceTime = now;
@@ -855,6 +1041,7 @@ with tab_game:
 
             if (!isSimRunning) {{
                 renderer.render(scene, camera);
+                renderMinimap();
                 return;
             }}
 
@@ -941,15 +1128,29 @@ with tab_game:
             );
             camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
 
+            // 골든 링 회전 및 부유 애니메이션 & 충돌 판정
+            const time = clock.getElapsedTime();
             rings.forEach(ring => {{
-                ring.rotation.y += 0.02;
-                if (ring.visible && player.pos.distanceTo(ring.position) < 5.0) {{
+                ring.rotation.y += 0.035;
+                ring.rotation.x = Math.sin(time * 2.0 + ring.userData.phase) * 0.2;
+                ring.position.y = ring.userData.baseY + Math.sin(time * 3.0 + ring.userData.phase) * 1.2;
+
+                if (ring.visible && player.pos.distanceTo(ring.position) < 5.5) {{
                     ring.visible = false;
                     ringCount++;
                     ringScore.innerHTML = `${{ringCount}} <span>/ 10</span>`;
                     player.vel.y = Math.max(player.vel.y, 18);
                     player.vel.add(forward.clone().multiplyScalar(22));
                     player.canDoubleJump = true;
+
+                    if (ringCount >= 10) {{
+                        triggerBanner("🎉 MISSION COMPLETE! 모든 골든 링 수집 완료! 🎉", "#38bdf8", 1800);
+                        setTimeout(() => {{
+                            openReport(true);
+                        }}, 1000);
+                    }} else {{
+                        triggerBanner(`⭐ 골든 링 획득! (${{ringCount}}/10)`, "#facc15", 900);
+                    }}
                 }}
             }});
 
@@ -967,6 +1168,7 @@ with tab_game:
             hudMomentum.innerHTML = `${{Math.round(currentMomentum)}} <span>kg·m/s</span>`;
 
             renderer.render(scene, camera);
+            renderMinimap(); // 미니맵 실시간 업데이트
         }}
 
         window.addEventListener('resize', () => {{
