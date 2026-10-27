@@ -1,67 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import math
-# 상단 UI 여백 및 탭 클릭 버그 해결 CSS
-st.markdown("""
-<style>
-    /* 1. 상단 기본 헤더 영역의 클릭 방해만 차단하고 높이 최소화 */
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        height: 0rem !important;
-        pointer-events: none !important;
-    }
-    
-    /* 2. 최상단 컨테이너 패딩 강제 0 */
-    .stAppViewContainer, .main, .block-container {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0 !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-        max-width: 100% !important;
-    }
-    
-    /* 3. 탭 바를 최상위 레이어(z-index)로 올려서 클릭 보장 */
-    div[data-testid="stTabs"] {
-        position: relative !important;
-        z-index: 1000 !important;
-        margin-top: 0 !important;
-    }
-    
-    div[data-baseweb="tab-list"] {
-        position: relative !important;
-        z-index: 1001 !important;
-        pointer-events: auto !important;
-        gap: 8px !important;
-    }
 
-    button[data-baseweb="tab"] {
-        pointer-events: auto !important;
-        cursor: pointer !important;
-    }
-
-    div[data-baseweb="tab-panel"] {
-        padding-top: 0.4rem !important;
-    }
-
-    /* 4. iframe이 탭을 덮지 않도록 위치 정리 */
-    div[data-testid="stCustomComponentV1"] {
-        position: relative !important;
-        z-index: 1 !important;
-        margin-top: 0 !important;
-        padding: 0 !important;
-    }
-
-    iframe {
-        border: none !important;
-        display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    footer {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
-</style>
-""", unsafe_allow_html=True)
 # 1. 스트림릿 와이드 모드 설정
 st.set_page_config(
     page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
@@ -70,40 +10,50 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 상단 흰색 여백 제거 및 불필요한 Streamlit 헤더 정리
+# 상단 흰색 여백, 로딩바, 헤더 툴바 및 내부 컨테이너 패딩 강제 제거
 st.markdown("""
 <style>
-    /* 상단 헤더 높이 최소화 */
+    /* 1. 상단 Streamlit 헤더 및 툴바 완전 제거 */
     header[data-testid="stHeader"] {
-        background: transparent !important;
-        height: 1.5rem !important;
-        z-index: 1 !important;
+        display: none !important;
     }
     
-    /* 최상단 여백(padding-top) 0으로 설정 */
-    .block-container {
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
+    /* 2. 최상단 컨테이너 패딩 및 마진 강제 0 */
+    .stAppViewContainer, .main, .block-container {
+        padding-top: 0 !important;
+        margin-top: 0 !important;
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
         max-width: 100% !important;
     }
-
-    /* 탭 헤더 및 내부 여백 밀착 */
+    
+    /* 3. 탭 바를 상단 맨 끝으로 밀착 */
     div[data-testid="stTabs"] {
-        margin-top: -0.5rem !important;
+        margin-top: 0 !important;
+        padding-top: 0 !important;
     }
+    
     div[data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    div[data-baseweb="tab-panel"] {
-        padding-top: 0.2rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
 
-    /* components.html iframe 테두리 및 여백 제거 */
+    div[data-baseweb="tab-panel"] {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* 4. iframe 래퍼의 상단 빈 공간 강제 삭제 */
+    div[data-testid="stCustomComponentV1"] {
+        margin-top: -10px !important;
+        padding: 0 !important;
+    }
+
     iframe {
         border: none !important;
         display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     footer {visibility: hidden;}
