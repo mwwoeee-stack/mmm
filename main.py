@@ -1,7 +1,69 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import math
+# 상단 헤더 차단 및 탭 클릭 완전 해결 CSS
+st.markdown("""
+<style>
+    /* 1. 상단 기본 헤더 컨테이너를 아예 화면 밖으로 밀어내어 클릭 간섭 원천 차단 */
+    header[data-testid="stHeader"] {
+        display: none !important;
+        height: 0px !important;
+        min-height: 0px !important;
+        max-height: 0px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* 툴바 및 메뉴 버튼 비활성화 */
+    [data-testid="stToolbar"] {
+        display: none !important;
+    }
+    
+    /* 2. 최상단 컨테이너 패딩 강제 0 */
+    .stAppViewContainer, .main, .block-container {
+        padding-top: 0.8rem !important;
+        padding-bottom: 0 !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
+        max-width: 100% !important;
+    }
+    
+    /* 3. 탭 바 레이어를 최상위로 올리고 클릭 영역 강제 보장 */
+    div[data-testid="stTabs"] {
+        position: relative !important;
+        z-index: 99999 !important;
+    }
+    
+    div[data-baseweb="tab-list"] {
+        position: relative !important;
+        z-index: 99999 !important;
+        pointer-events: auto !important;
+    }
 
+    button[data-baseweb="tab"], button[role="tab"] {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        z-index: 100000 !important;
+    }
+
+    /* 4. iframe이 위쪽으로 침범하지 않도록 여백 고정 */
+    div[data-testid="stCustomComponentV1"] {
+        position: relative !important;
+        z-index: 1 !important;
+        margin-top: 4px !important;
+    }
+
+    iframe {
+        border: none !important;
+        display: block !important;
+    }
+
+    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
 # 1. 스트림릿 와이드 모드 설정
 st.set_page_config(
     page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
