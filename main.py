@@ -1,10 +1,19 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import math
-# 상단 헤더 차단 및 탭 클릭 완전 해결 CSS
+
+# 1. 스트림릿 와이드 모드 설정
+st.set_page_config(
+    page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
+    page_icon="🕷️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# 상단 헤더 차단 및 탭 클릭 완전 해결 + 피터 파커 통신 HUD CSS
 st.markdown("""
 <style>
-    /* 1. 상단 기본 헤더 컨테이너를 아예 화면 밖으로 밀어내어 클릭 간섭 원천 차단 */
+    /* 1. 상단 기본 헤더 컨테이너 클릭 간섭 원천 차단 */
     header[data-testid="stHeader"] {
         display: none !important;
         height: 0px !important;
@@ -16,15 +25,14 @@ st.markdown("""
         visibility: hidden !important;
     }
     
-    /* 툴바 및 메뉴 버튼 비활성화 */
     [data-testid="stToolbar"] {
         display: none !important;
     }
     
-    /* 2. 최상단 컨테이너 패딩 강제 0 */
+    /* 2. 최상단 컨테이너 패딩 강제 조정 */
     .stAppViewContainer, .main, .block-container {
         padding-top: 0.8rem !important;
-        padding-bottom: 0 !important;
+        padding-bottom: 1rem !important;
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
         max-width: 100% !important;
@@ -40,12 +48,14 @@ st.markdown("""
         position: relative !important;
         z-index: 99999 !important;
         pointer-events: auto !important;
+        gap: 8px !important;
     }
 
     button[data-baseweb="tab"], button[role="tab"] {
         pointer-events: auto !important;
         cursor: pointer !important;
         z-index: 100000 !important;
+        font-weight: 700 !important;
     }
 
     /* 4. iframe이 위쪽으로 침범하지 않도록 여백 고정 */
@@ -60,81 +70,95 @@ st.markdown("""
         display: block !important;
     }
 
+    /* 5. 피터 파커 통신 HUD 전용 스타일링 */
+    .comm-hud-wrapper {
+        background: radial-gradient(circle at top right, rgba(220, 38, 38, 0.18), rgba(11, 14, 20, 0.95) 75%);
+        border: 2px solid rgba(56, 189, 248, 0.35);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(56, 189, 248, 0.1);
+        margin-bottom: 16px;
+    }
+    .comm-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        padding-bottom: 12px;
+        margin-bottom: 18px;
+    }
+    .comm-hero-tag {
+        font-size: 16px;
+        font-weight: 900;
+        color: #ef4444;
+        letter-spacing: 1.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .comm-live-beacon {
+        width: 10px;
+        height: 10px;
+        background: #22c55e;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #22c55e;
+        animation: commPulse 1.4s infinite;
+    }
+    @keyframes commPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.35; transform: scale(0.85); }
+    }
+    .comm-status-pill {
+        font-size: 11px;
+        font-family: monospace;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.15);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        padding: 3px 10px;
+        border-radius: 8px;
+    }
+    .chat-bubble-peter {
+        background: rgba(30, 41, 59, 0.85);
+        border-left: 4px solid #ef4444;
+        border-top: 1px solid rgba(239, 68, 68, 0.25);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 4px 16px 16px 16px;
+        padding: 14px 18px;
+        margin: 12px 0;
+        color: #f8fafc;
+        font-size: 14px;
+        line-height: 1.6;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    .chat-bubble-user {
+        background: rgba(2, 132, 199, 0.22);
+        border-right: 4px solid #38bdf8;
+        border-top: 1px solid rgba(56, 189, 248, 0.3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-left: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px 4px 16px 16px;
+        padding: 14px 18px;
+        margin: 12px 0 12px auto;
+        max-width: 82%;
+        color: #f8fafc;
+        font-size: 14px;
+        line-height: 1.6;
+        text-align: right;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
-# 1. 스트림릿 와이드 모드 설정
-st.set_page_config(
-    page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
-    page_icon="🕷️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
-# 상단 UI 여백 및 탭 클릭 버그 해결 CSS
-st.markdown("""
-<style>
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        height: 0rem !important;
-        pointer-events: none !important;
-    }
-    
-    .stAppViewContainer, .main, .block-container {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0 !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-        max-width: 100% !important;
-    }
-    
-    div[data-testid="stTabs"] {
-        position: relative !important;
-        z-index: 1000 !important;
-        margin-top: 0 !important;
-    }
-    
-    div[data-baseweb="tab-list"] {
-        position: relative !important;
-        z-index: 1001 !important;
-        pointer-events: auto !important;
-        gap: 8px !important;
-    }
-
-    button[data-baseweb="tab"] {
-        pointer-events: auto !important;
-        cursor: pointer !important;
-    }
-
-    div[data-baseweb="tab-panel"] {
-        padding-top: 0.4rem !important;
-    }
-
-    div[data-testid="stCustomComponentV1"] {
-        position: relative !important;
-        z-index: 1 !important;
-        margin-top: 0 !important;
-        padding: 0 !important;
-    }
-
-    iframe {
-        border: none !important;
-        display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    footer {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
-</style>
-""", unsafe_allow_html=True)
-
-# 2. 탭 구성
-tab_game, tab_lab, tab_boss = st.tabs([
+# 2. 탭 구성 (피터 파커 통신 링크 탭 추가)
+tab_game, tab_lab, tab_boss, tab_chat = st.tabs([
     "🎮 3D 시티 웹스윙 & 물리 데이터 로거", 
     "🧪 첨단 생체재료 역학 연구소 (거미줄 제작)", 
-    "⚔️ 빌런 보스 레이드 & 레벨업 배틀"
+    "⚔️ 빌런 보스 레이드 & 레벨업 배틀",
+    "🕷️ 피터 파커와의 스타크-통신 링크"
 ])
 
 # 세션 상태 보존
@@ -147,7 +171,6 @@ if "web_range" not in st.session_state:
 if "web_thickness" not in st.session_state:
     st.session_state.web_thickness = 3
 
-# UI 슬라이더 제어용 세션 상태
 if "slider_matrix" not in st.session_state:
     st.session_state.slider_matrix = "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)"
 if "slider_rho_x" not in st.session_state:
@@ -158,6 +181,15 @@ if "slider_thickness" not in st.session_state:
     st.session_state.slider_thickness = 3
 if "slider_color" not in st.session_state:
     st.session_state.slider_color = "#38bdf8"
+
+# 피터 파커 대화 내역 세션
+if "peter_messages" not in st.session_state:
+    st.session_state.peter_messages = [
+        {
+            "role": "peter", 
+            "content": "안녕! 나 지금 퀸즈 쪽 고층 빌딩 사이 순찰 중인데, 웹슈터 탄성 상태 어때? 랩실에서 가교 밀도나 챔버 압력 바꿔주면 바로 피드백 줄게! 궁금한 고분자 역학이나 빌런 공략법 있으면 뭐든 물어봐!"
+        }
+    ]
 
 # ==================== [TAB 2: 거미줄 제작 & 물리역학 연구소] ====================
 with tab_lab:
@@ -321,7 +353,7 @@ with tab_lab:
             st.session_state.web_thickness = selected_thickness
             st.success(f"생체역학 파라미터가 장착되었습니다! (탄성 견인 속도: {calculated_web_speed} km/h, 사정거리: {calculated_web_range} m)")
 
-# ==================== [TAB 1: 3D 시티 게임 (물리 리포트 기능 탑재)] ====================
+# ==================== [TAB 1: 3D 시티 게임 (물리 리포트 + 레이더 미니맵)] ====================
 with tab_game:
     current_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     current_web_speed = float(st.session_state.web_speed)
@@ -615,7 +647,6 @@ with tab_game:
         • <b>우측 하단 레이더</b>에서 노란 점(골든 링)을 확인하고 이동하세요!
     </div>
 
-    <!-- 우측 하단 레이더 미니맵 -->
     <div id="minimap-label">📡 CITY RADAR</div>
     <div id="minimap-wrapper">
         <canvas id="minimap-canvas" width="200" height="200"></canvas>
@@ -715,7 +746,6 @@ with tab_game:
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // ==================== [골든 링: 건물 외부 및 트인 시야 생성 로직] ====================
         const rings = [];
         const ringGeo = new THREE.TorusGeometry(3.6, 0.45, 14, 28);
         const ringMat = new THREE.MeshStandardMaterial({{ 
@@ -813,16 +843,13 @@ with tab_game:
         const hitVignette = document.getElementById('hit-vignette');
         let alertTimeout = null;
 
-        // 레이더 미니맵 2D 컨텍스트
         const minimapCanvas = document.getElementById('minimap-canvas');
         const miniCtx = minimapCanvas.getContext('2d');
-        const RADAR_RADIUS = 100;
-        const WORLD_MAP_SIZE = 300.0; // 미니맵에 표시할 도시 월드 반경 (±150m)
+        const WORLD_MAP_SIZE = 300.0;
 
         function renderMinimap() {{
             miniCtx.clearRect(0, 0, 200, 200);
 
-            // 레이더 베이스 배경 원형
             miniCtx.save();
             miniCtx.beginPath();
             miniCtx.arc(100, 100, 96, 0, Math.PI * 2);
@@ -830,7 +857,6 @@ with tab_game:
             miniCtx.fill();
             miniCtx.clip();
 
-            // 거리 가이드 원
             miniCtx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
             miniCtx.lineWidth = 1;
             miniCtx.beginPath();
@@ -840,20 +866,17 @@ with tab_game:
             miniCtx.arc(100, 100, 94, 0, Math.PI * 2);
             miniCtx.stroke();
 
-            // 십자선 가이드
             miniCtx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
             miniCtx.beginPath();
             miniCtx.moveTo(100, 5); miniCtx.lineTo(100, 195);
             miniCtx.moveTo(5, 100); miniCtx.lineTo(195, 100);
             miniCtx.stroke();
 
-            // 골든 링 위치 렌더링 (노란색 점)
             rings.forEach(ring => {{
                 if (ring.visible) {{
                     const rx = 100 + (ring.position.x / WORLD_MAP_SIZE) * 170;
                     const rz = 100 + (ring.position.z / WORLD_MAP_SIZE) * 170;
 
-                    // 링 발광 효과
                     miniCtx.beginPath();
                     miniCtx.arc(rx, rz, 4.5, 0, Math.PI * 2);
                     miniCtx.fillStyle = '#facc15';
@@ -864,11 +887,9 @@ with tab_game:
                 }}
             }});
 
-            // 플레이어 마커 렌더링 (붉은 점 및 시선 방향)
             const px = 100 + (player.pos.x / WORLD_MAP_SIZE) * 170;
             const pz = 100 + (player.pos.z / WORLD_MAP_SIZE) * 170;
 
-            // 시선 방향 콘 표시
             miniCtx.save();
             miniCtx.translate(px, pz);
             miniCtx.rotate(-yaw);
@@ -1190,7 +1211,6 @@ with tab_game:
             );
             camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
 
-            // 골든 링 회전 및 부유 애니메이션 & 충돌 판정
             const time = clock.getElapsedTime();
             rings.forEach(ring => {{
                 ring.rotation.y += 0.035;
@@ -1230,7 +1250,7 @@ with tab_game:
             hudMomentum.innerHTML = `${{Math.round(currentMomentum)}} <span>kg·m/s</span>`;
 
             renderer.render(scene, camera);
-            renderMinimap(); // 미니맵 실시간 업데이트
+            renderMinimap();
         }}
 
         window.addEventListener('resize', () => {{
@@ -1247,7 +1267,7 @@ with tab_game:
 
     components.html(game_html, height=750, scrolling=False)
 
-# ==================== [TAB 3: 보스전 (빌런 진화 + 능력 업그레이드 시스템)] ====================
+# ==================== [TAB 3: 보스전 (빌런 진화 + 능력 업그레이드)] ====================
 with tab_boss:
     boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     boss_web_speed = float(st.session_state.web_speed)
@@ -2124,3 +2144,80 @@ with tab_boss:
     """
 
     components.html(boss_html, height=750, scrolling=False)
+
+# ==================== [TAB 4: 피터 파커와의 스타크-통신 링크] ====================
+with tab_chat:
+    st.markdown(f"""
+    <div class="comm-hud-wrapper">
+        <div class="comm-topbar">
+            <div class="comm-hero-tag">
+                <div class="comm-live-beacon"></div>
+                🕸️ STARK-COMM // PETER PARKER
+            </div>
+            <div class="comm-status-pill">
+                SYNCED: {st.session_state.web_speed} km/h | {st.session_state.web_range} m
+            </div>
+        </div>
+        <p style="font-size: 12.5px; color: #94a3b8; margin-top: -6px;">
+            스타크 인더스트리 인공위성 네트워크로 암호화된 통신 채널입니다. 뉴욕 현장 순찰 중인 피터 파커와 실시간 장비 물성 및 작전 대화를 나눠보세요.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 이전 대화 렌더링
+    for msg in st.session_state.peter_messages:
+        if msg["role"] == "peter":
+            st.markdown(f"""
+            <div class="chat-bubble-peter">
+                <div style="font-size: 11px; font-weight: 800; color: #ef4444; margin-bottom: 4px; letter-spacing: 0.5px;">
+                    🕷️ PETER PARKER (QUEENS PATROL)
+                </div>
+                {msg['content']}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="chat-bubble-user">
+                <div style="font-size: 11px; font-weight: 800; color: #38bdf8; margin-bottom: 4px; letter-spacing: 0.5px;">
+                    🧪 LAB RESEARCHER
+                </div>
+                {msg['content']}
+            </div>
+            """, unsafe_allow_html=True)
+
+    # 챗 입력 폼
+    with st.form("peter_chat_form", clear_on_submit=True):
+        col_input, col_send = st.columns([5, 1])
+        with col_input:
+            user_msg = st.text_input(
+                "피터에게 무전을 전송하세요",
+                placeholder="피터, 현재 세팅으로 베놈 상대할 때 팁 있어?",
+                label_visibility="collapsed"
+            )
+        with col_send:
+            send_btn = st.form_submit_button("전송 📡", use_container_width=True)
+
+    if send_btn and user_msg.strip():
+        # 사용자 메시지 추가
+        st.session_state.peter_messages.append({"role": "user", "content": user_msg})
+
+        # 피터 파커 톰 홀랜드 스타일 시뮬레이션 응답 생성 로직
+        current_speed = st.session_state.web_speed
+        current_range = st.session_state.web_range
+        current_matrix = st.session_state.slider_matrix
+
+        reply = ""
+        u_lower = user_msg.lower()
+        if "안녕" in u_lower or "누구" in u_lower or "반가" in u_lower:
+            reply = f"오, 안녕! 스타크 랩 담당자 맞지? 지금 퀸즈 쪽 크레인에 잠깐 매달려서 핫도그 먹으려던 참이었어. 현재 기질이 '{current_matrix}'로 설정되어 있네! 확실히 줄이 쫀쫀해서 좋은데?"
+        elif "속도" in u_lower or "빠르" in u_lower or "스피드" in u_lower:
+            reply = f"지금 탄성 추진 속도가 {current_speed} km/h로 나오거든? 스타크 타워에서 뛰어내려서 스윙할 때 G-force가 온몸으로 팍 느껴질 정도야! 고무 탄성 이론 가교 밀도 세팅이 아주 제대로 먹힌 것 같아!"
+        elif "거리" in u_lower or "사정거리" in u_lower or "압력" in u_lower:
+            reply = f"현재 유효 사정거리가 {current_range} m잖아? 마이크로 노즐 챔버 분사 압력이 엄청 세서, 허드슨 강 근처 넓은 대로에서도 건물 꼭대기 난간을 바로 저격해서 잡을 수 있어. 원거리 타격감 완전 최고야!"
+        elif "보스" in u_lower or "고블린" in u_lower or "베놈" in u_lower or "일렉트로" in u_lower:
+            reply = "빌런 공략? 그린 고블린은 글라이더가 빠르니까 거미줄로 4~5번 연타해서 포박 게이지 100% 채우고 추락시켜야 해! 일렉트로는 플라즈마 피하면서 Q 궁극기 [웹 블라섬]을 한 번에 터뜨리는 게 직빵이고, 베놈은 덩치가 커서 회피 기동이 필수야!"
+        else:
+            reply = f"와, 방금 네 무전 들으면서 빌딩 코너 돌았거든? 네가 세팅해 준 기질({current_matrix})이랑 유속 파라미터 덕분에 도심 순찰이 훨씬 수월해졌어. 골든 링 다 모으고 비행 역학 리포트 나오면 영률(E) 수치 좀 더 올려서 테스트해 보자!"
+
+        st.session_state.peter_messages.append({"role": "peter", "content": reply})
+        st.rerun()
