@@ -260,7 +260,7 @@ with tab_lab:
             st.session_state.web_thickness = selected_thickness
             st.success(f"생체역학 파라미터가 장착되었습니다! (탄성 견인 속도: {calculated_web_speed} km/h, 사정거리: {calculated_web_range} m)")
 
-# ==================== [TAB 1: 3D 시티 게임 (최적화 + 소프트 착지 + 거리 제한)] ====================
+# ==================== [TAB 1: 3D 시티 게임 (원거리 발사 + 렉/충돌 완벽 해결)] ====================
 with tab_game:
     current_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     current_web_speed = float(st.session_state.web_speed)
@@ -287,10 +287,10 @@ with tab_game:
             position: absolute; 
             top: 0; 
             left: 0; 
-            cursor: grab; 
+            cursor: crosshair; 
             outline: none;
         }}
-        #canvas-container:active {{ cursor: grabbing; }}
+        #canvas-container:active {{ cursor: crosshair; }}
         
         #hud {{
             position: absolute;
@@ -488,7 +488,7 @@ with tab_game:
 
     <div id="start-overlay" class="overlay-screen" style="cursor: pointer;">
         <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 8px; color: #ef4444; letter-spacing: 1px;">🕷️ SPIDER-MAN 3D CITY</h1>
-        <p style="font-size: 14px; color: #cbd5e1; background: rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 20px;">▶ 클릭하여 비행 시작 (건물 85m 이하 유효 타격 지원)</p>
+        <p style="font-size: 14px; color: #cbd5e1; background: rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 20px;">▶ 화면을 클릭하여 비행 시작! (좌클릭 시 즉시 거미줄 발사)</p>
     </div>
 
     <div id="report-overlay" class="overlay-screen" style="display: none;">
@@ -548,9 +548,9 @@ with tab_game:
     <div id="stunt-alert">✨ ACROBATIC FLIP! ✨</div>
 
     <div id="controls-guide">
-        • <span class="key-badge">건물 클릭</span> 웹 견인 (최대 85m 이내만 발사) | <span class="key-badge">W,A,S,D</span> 조타<br>
-        • <span class="key-badge">Space</span> 점프 | <span class="key-badge">더블 Space</span> <b>공중제비 슈퍼점프</b><br>
-        • 옥상에 닿으면 순간이동 없이 <b>스무스하게 착지</b>합니다.
+        • <span class="key-badge">좌클릭</span> 마우스 위치 건물로 즉시 웹 견인 (사정거리 180m)<br>
+        • <span class="key-badge">우클릭 드래그</span> 시야 회전 | <span class="key-badge">W,A,S,D</span> 방향 조타<br>
+        • <span class="key-badge">Space</span> 점프 / 줄 끊고 날아가기 | <span class="key-badge">더블 Space</span> <b>공중제비 점프</b>
     </div>
 
     <div id="minimap-label">📡 CITY RADAR</div>
@@ -563,14 +563,11 @@ with tab_game:
     <script>
         const WEB_COLOR = {current_web_color};
         const WEB_SPEED = {current_web_speed};
-        const WEB_RANGE = {current_web_range};
+        // [개선 1] 유효 사정거리 180m 이상으로 대폭 확장
+        const MAX_ATTACH_DISTANCE = Math.max(180.0, {current_web_range});
         const WEB_THICKNESS = {current_web_thickness};
         const PLAYER_MASS = 65.0;
         const IMPACT_DT = 0.05;
-
-        // [개선 1] 유효 거미줄 발사 거리 제한 (85m 이내만 타격 허용)
-        const MAX_ATTACH_DISTANCE = Math.min(85.0, WEB_RANGE);
-        const MIN_ATTACH_DISTANCE = 6.0;
 
         const physicsLogger = {{
             maxSpeed: 0.0,
@@ -722,13 +719,13 @@ with tab_game:
         legs.position.y = 0.35;
         flipMeshGroup.add(legs);
 
-        // [개선 2] 거미줄 발사 렉 완화 (정적 버퍼 사전 할당 및 GC 방지)
+        // [개선 2] 거미줄 버퍼 정적 할당
         const webMat = new THREE.LineBasicMaterial({{ color: WEB_COLOR, linewidth: WEB_THICKNESS }});
-        const webLinePositions = new Float32Array(6);
+        const webPositions = new Float32Array(6);
         const webGeo = new THREE.BufferGeometry();
-        const webPositionAttr = new THREE.BufferAttribute(webLinePositions, 3);
-        webPositionAttr.setUsage(THREE.DynamicDrawUsage);
-        webGeo.setAttribute('position', webPositionAttr);
+        const webPosAttr = new THREE.BufferAttribute(webPositions, 3);
+        webPosAttr.setUsage(THREE.DynamicDrawUsage);
+        webGeo.setAttribute('position', webPosAttr);
 
         const webLine = new THREE.Line(webGeo, webMat);
         webLine.visible = false;
@@ -746,9 +743,8 @@ with tab_game:
         }};
 
         let yaw = 0, pitch = 0.2;
-        let isDragging = false;
+        let isDraggingView = false;
         let startMouseX = 0, startMouseY = 0;
-        let clickStartX = 0, clickStartY = 0;
         let isSimRunning = false;
 
         const overlay = document.getElementById('start-overlay');
@@ -929,16 +925,55 @@ with tab_game:
 
         window.addEventListener('keyup', (e) => {{ keys[e.code] = false; }});
 
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // [개선 3: 거미줄 발사 전용 함수] 클릭 시 즉각적이고 정확하게 레이캐스팅 발사
+        function triggerWebShot(clientX, clientY) {{
+            if (!isSimRunning) return;
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            raycaster.far = MAX_ATTACH_DISTANCE; // 최대 사정거리 180m
+            const hits = raycaster.intersectObjects(buildings, false);
+
+            if (hits.length > 0) {{
+                const hitPoint = hits[0].point;
+                const directDist = player.pos.distanceTo(hitPoint);
+
+                if (directDist <= MAX_ATTACH_DISTANCE) {{
+                    player.isWebZipping = true;
+                    player.zipTarget.copy(hitPoint);
+                    webLine.visible = true;
+                    player.canDoubleJump = true;
+                    triggerBanner("🕸️ THWIP! 웹 견인 가속!", "#38bdf8", 600);
+                }}
+            }}
+        }}
+
+        // 마우스 조작: 좌클릭 = 즉시 거미줄 발사, 우클릭 = 시야 회전 (드래그 충돌 제거)
         container.addEventListener('mousedown', (e) => {{
-            isDragging = true;
-            startMouseX = e.clientX;
-            startMouseY = e.clientY;
-            clickStartX = e.clientX;
-            clickStartY = e.clientY;
+            container.focus();
+            if (e.button === 0) {{
+                // 좌클릭: 즉시 거미줄 발사
+                triggerWebShot(e.clientX, e.clientY);
+            }} else if (e.button === 2) {{
+                // 우클릭: 시야 회전 시작
+                isDraggingView = true;
+                startMouseX = e.clientX;
+                startMouseY = e.clientY;
+            }}
         }});
 
         window.addEventListener('mousemove', (e) => {{
-            if (!isDragging) return;
+            // 좌클릭 누른 채 마우스 이동 시에도 계속 조준 지원
+            if ((e.buttons & 1) === 1 && !isDraggingView) {{
+                triggerWebShot(e.clientX, e.clientY);
+            }}
+
+            if (!isDraggingView) return;
             const dx = e.clientX - startMouseX;
             const dy = e.clientY - startMouseY;
             startMouseX = e.clientX;
@@ -947,40 +982,13 @@ with tab_game:
             pitch = Math.max(-0.4, Math.min(1.2, pitch + dy * 0.005));
         }});
 
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        // [개선 1 반영] 유효 거리(85m) 이내만 거미줄 발사 처리
         window.addEventListener('mouseup', (e) => {{
-            if (!isDragging) return;
-            isDragging = false;
-            const moveDist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
-            if (moveDist < 6 && isSimRunning) {{
-                const rect = renderer.domElement.getBoundingClientRect();
-                mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-                mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-                raycaster.setFromCamera(mouse, camera);
-                raycaster.far = MAX_ATTACH_DISTANCE; // 최대 발사 가능 거리 제한
-                const hits = raycaster.intersectObjects(buildings);
-
-                if (hits.length > 0 && hits[0].point.y > 4) {{
-                    const hitPoint = hits[0].point;
-                    const directDist = player.pos.distanceTo(hitPoint);
-
-                    if (directDist >= MIN_ATTACH_DISTANCE && directDist <= MAX_ATTACH_DISTANCE) {{
-                        player.isWebZipping = true;
-                        player.zipTarget.copy(hitPoint);
-                        webLine.visible = true;
-                        player.canDoubleJump = true;
-                    }} else if (directDist > MAX_ATTACH_DISTANCE) {{
-                        triggerBanner("⚠️ 건물과의 거리가 너무 멉니다! (85m 이내 필요)", "#ef4444", 800);
-                    }}
-                }}
-            }}
+            if (e.button === 2) isDraggingView = false;
         }});
 
-        // [개선 3] 옥상 착지 시 순간이동 느낌을 없애는 스무스 감속 충돌 보정
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // [개선 4] 옥상 착지 순간이동 느낌을 완전히 없앤 부드러운 안착 로직
         function resolveBuildingCollisions(delta) {{
             const px = player.pos.x;
             const py = player.pos.y;
@@ -988,10 +996,9 @@ with tab_game:
 
             for (let b of buildingColliders) {{
                 if (px > b.minX && px < b.maxX && pz > b.minZ && pz < b.maxZ) {{
-                    // 옥상 상단에 진입했을 때 강제 점프 대신 스무스 보간(lerp) 적용
-                    if (py >= b.topY - 1.2 && player.vel.y <= 0) {{
-                        // 서서히 옥상 높이로 안착 (순간이동 느낌 제거)
-                        player.pos.y = THREE.MathUtils.lerp(player.pos.y, b.topY, Math.min(1.0, delta * 18.0));
+                    // 옥상 상단에 진입했을 때 강제 점프 없이 스무스하게 보간 안착
+                    if (py >= b.topY - 1.5 && player.vel.y <= 0) {{
+                        player.pos.y = THREE.MathUtils.lerp(player.pos.y, b.topY, Math.min(1.0, delta * 15.0));
                         
                         if (Math.abs(player.pos.y - b.topY) < 0.15) {{
                             player.pos.y = b.topY;
@@ -1077,24 +1084,24 @@ with tab_game:
                 if (dist < 4.0) {{
                     player.isWebZipping = false;
                     webLine.visible = false;
-                    player.vel.y = Math.max(player.vel.y, 20.0);
+                    player.vel.y = Math.max(player.vel.y, 22.0);
                 }} else {{
                     const pullDir = toTarget.normalize();
-                    const targetSpeed = Math.min(dist * 2.8, WEB_SPEED * 0.45);
-                    player.vel.lerp(pullDir.multiplyScalar(targetSpeed), delta * 5.0);
+                    const targetSpeed = Math.min(dist * 3.0, WEB_SPEED * 0.5);
+                    player.vel.lerp(pullDir.multiplyScalar(targetSpeed), delta * 5.5);
 
                     if (keys['KeyA']) player.vel.add(right.clone().multiplyScalar(-10));
                     if (keys['KeyD']) player.vel.add(right.clone().multiplyScalar(10));
 
-                    // [개선 2 반영] 메모리 재할당 없이 기존 배열에만 값 주입하여 렉 제거
-                    const posArr = webPositionAttr.array;
+                    // 메모리 재할당 없이 기존 배열에만 값 주입하여 렉 제거
+                    const posArr = webPosAttr.array;
                     posArr[0] = player.pos.x;
                     posArr[1] = player.pos.y + 0.8;
                     posArr[2] = player.pos.z;
                     posArr[3] = player.zipTarget.x;
                     posArr[4] = player.zipTarget.y;
                     posArr[5] = player.zipTarget.z;
-                    webPositionAttr.needsUpdate = true;
+                    webPosAttr.needsUpdate = true;
                 }}
             }} else {{
                 const controlPower = player.isGrounded ? 55.0 : 42.0;
@@ -1805,8 +1812,6 @@ with tab_boss:
             startX = e.clientX;
             startY = e.clientY;
         }});
-
-        window.addEventListener('contextmenu', (e) => e.preventDefault());
 
         window.addEventListener('mousemove', (e) => {{
             if (!isRightDragging) return;
