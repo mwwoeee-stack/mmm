@@ -1,10 +1,18 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import math
-# 상단 헤더 차단 및 탭 클릭 완전 해결 CSS
+
+# 1. 스트림릿 와이드 모드 설정
+st.set_page_config(
+    page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
+    page_icon="🕷️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# 상단 UI 여백 및 탭 클릭 보장 CSS
 st.markdown("""
 <style>
-    /* 1. 상단 기본 헤더 컨테이너를 아예 화면 밖으로 밀어내어 클릭 간섭 원천 차단 */
     header[data-testid="stHeader"] {
         display: none !important;
         height: 0px !important;
@@ -16,12 +24,10 @@ st.markdown("""
         visibility: hidden !important;
     }
     
-    /* 툴바 및 메뉴 버튼 비활성화 */
     [data-testid="stToolbar"] {
         display: none !important;
     }
     
-    /* 2. 최상단 컨테이너 패딩 강제 0 */
     .stAppViewContainer, .main, .block-container {
         padding-top: 0.8rem !important;
         padding-bottom: 0 !important;
@@ -30,7 +36,6 @@ st.markdown("""
         max-width: 100% !important;
     }
     
-    /* 3. 탭 바 레이어를 최상위로 올리고 클릭 영역 강제 보장 */
     div[data-testid="stTabs"] {
         position: relative !important;
         z-index: 99999 !important;
@@ -40,6 +45,7 @@ st.markdown("""
         position: relative !important;
         z-index: 99999 !important;
         pointer-events: auto !important;
+        gap: 8px !important;
     }
 
     button[data-baseweb="tab"], button[role="tab"] {
@@ -48,7 +54,6 @@ st.markdown("""
         z-index: 100000 !important;
     }
 
-    /* 4. iframe이 위쪽으로 침범하지 않도록 여백 고정 */
     div[data-testid="stCustomComponentV1"] {
         position: relative !important;
         z-index: 1 !important;
@@ -58,71 +63,6 @@ st.markdown("""
     iframe {
         border: none !important;
         display: block !important;
-    }
-
-    footer {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
-</style>
-""", unsafe_allow_html=True)
-# 1. 스트림릿 와이드 모드 설정
-st.set_page_config(
-    page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
-    page_icon="🕷️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# 상단 UI 여백 및 탭 클릭 버그 해결 CSS
-st.markdown("""
-<style>
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        height: 0rem !important;
-        pointer-events: none !important;
-    }
-    
-    .stAppViewContainer, .main, .block-container {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0 !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-        max-width: 100% !important;
-    }
-    
-    div[data-testid="stTabs"] {
-        position: relative !important;
-        z-index: 1000 !important;
-        margin-top: 0 !important;
-    }
-    
-    div[data-baseweb="tab-list"] {
-        position: relative !important;
-        z-index: 1001 !important;
-        pointer-events: auto !important;
-        gap: 8px !important;
-    }
-
-    button[data-baseweb="tab"] {
-        pointer-events: auto !important;
-        cursor: pointer !important;
-    }
-
-    div[data-baseweb="tab-panel"] {
-        padding-top: 0.4rem !important;
-    }
-
-    div[data-testid="stCustomComponentV1"] {
-        position: relative !important;
-        z-index: 1 !important;
-        margin-top: 0 !important;
-        padding: 0 !important;
-    }
-
-    iframe {
-        border: none !important;
-        display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
     }
 
     footer {visibility: hidden;}
@@ -147,7 +87,6 @@ if "web_range" not in st.session_state:
 if "web_thickness" not in st.session_state:
     st.session_state.web_thickness = 3
 
-# UI 슬라이더 제어용 세션 상태
 if "slider_matrix" not in st.session_state:
     st.session_state.slider_matrix = "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)"
 if "slider_rho_x" not in st.session_state:
@@ -321,7 +260,7 @@ with tab_lab:
             st.session_state.web_thickness = selected_thickness
             st.success(f"생체역학 파라미터가 장착되었습니다! (탄성 견인 속도: {calculated_web_speed} km/h, 사정거리: {calculated_web_range} m)")
 
-# ==================== [TAB 1: 3D 시티 게임 (물리 리포트 기능 탑재)] ====================
+# ==================== [TAB 1: 3D 시티 게임 (최적화 + 소프트 착지 + 거리 제한)] ====================
 with tab_game:
     current_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     current_web_speed = float(st.session_state.web_speed)
@@ -456,7 +395,6 @@ with tab_game:
             color: #38bdf8;
         }}
 
-        /* 우측 하단 레이더 미니맵 */
         #minimap-wrapper {{
             position: absolute;
             bottom: 15px;
@@ -550,7 +488,7 @@ with tab_game:
 
     <div id="start-overlay" class="overlay-screen" style="cursor: pointer;">
         <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 8px; color: #ef4444; letter-spacing: 1px;">🕷️ SPIDER-MAN 3D CITY</h1>
-        <p style="font-size: 14px; color: #cbd5e1; background: rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 20px;">▶ 클릭하여 비행 시작 (골든 링 10개 수집 시 분석 리포트 자동 완료)</p>
+        <p style="font-size: 14px; color: #cbd5e1; background: rgba(255, 255, 255, 0.1); padding: 8px 18px; border-radius: 20px;">▶ 클릭하여 비행 시작 (건물 85m 이하 유효 타격 지원)</p>
     </div>
 
     <div id="report-overlay" class="overlay-screen" style="display: none;">
@@ -610,12 +548,11 @@ with tab_game:
     <div id="stunt-alert">✨ ACROBATIC FLIP! ✨</div>
 
     <div id="controls-guide">
-        • <span class="key-badge">건물 클릭</span> 웹스윙 견인 | <span class="key-badge">W,A,S,D</span> 방향 조타<br>
+        • <span class="key-badge">건물 클릭</span> 웹 견인 (최대 85m 이내만 발사) | <span class="key-badge">W,A,S,D</span> 조타<br>
         • <span class="key-badge">Space</span> 점프 | <span class="key-badge">더블 Space</span> <b>공중제비 슈퍼점프</b><br>
-        • <b>우측 하단 레이더</b>에서 노란 점(골든 링)을 확인하고 이동하세요!
+        • 옥상에 닿으면 순간이동 없이 <b>스무스하게 착지</b>합니다.
     </div>
 
-    <!-- 우측 하단 레이더 미니맵 -->
     <div id="minimap-label">📡 CITY RADAR</div>
     <div id="minimap-wrapper">
         <canvas id="minimap-canvas" width="200" height="200"></canvas>
@@ -630,6 +567,10 @@ with tab_game:
         const WEB_THICKNESS = {current_web_thickness};
         const PLAYER_MASS = 65.0;
         const IMPACT_DT = 0.05;
+
+        // [개선 1] 유효 거미줄 발사 거리 제한 (85m 이내만 타격 허용)
+        const MAX_ATTACH_DISTANCE = Math.min(85.0, WEB_RANGE);
+        const MIN_ATTACH_DISTANCE = 6.0;
 
         const physicsLogger = {{
             maxSpeed: 0.0,
@@ -652,7 +593,7 @@ with tab_game:
         scene.fog = new THREE.FogExp2(0x0a1128, 0.005);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+        const renderer = new THREE.WebGLRenderer({{ antialias: true, powerPreference: 'high-performance' }});
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
@@ -715,7 +656,6 @@ with tab_game:
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // ==================== [골든 링: 건물 외부 및 트인 시야 생성 로직] ====================
         const rings = [];
         const ringGeo = new THREE.TorusGeometry(3.6, 0.45, 14, 28);
         const ringMat = new THREE.MeshStandardMaterial({{ 
@@ -782,8 +722,14 @@ with tab_game:
         legs.position.y = 0.35;
         flipMeshGroup.add(legs);
 
+        // [개선 2] 거미줄 발사 렉 완화 (정적 버퍼 사전 할당 및 GC 방지)
         const webMat = new THREE.LineBasicMaterial({{ color: WEB_COLOR, linewidth: WEB_THICKNESS }});
-        const webGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+        const webLinePositions = new Float32Array(6);
+        const webGeo = new THREE.BufferGeometry();
+        const webPositionAttr = new THREE.BufferAttribute(webLinePositions, 3);
+        webPositionAttr.setUsage(THREE.DynamicDrawUsage);
+        webGeo.setAttribute('position', webPositionAttr);
+
         const webLine = new THREE.Line(webGeo, webMat);
         webLine.visible = false;
         scene.add(webLine);
@@ -813,16 +759,13 @@ with tab_game:
         const hitVignette = document.getElementById('hit-vignette');
         let alertTimeout = null;
 
-        // 레이더 미니맵 2D 컨텍스트
         const minimapCanvas = document.getElementById('minimap-canvas');
         const miniCtx = minimapCanvas.getContext('2d');
-        const RADAR_RADIUS = 100;
-        const WORLD_MAP_SIZE = 300.0; // 미니맵에 표시할 도시 월드 반경 (±150m)
+        const WORLD_MAP_SIZE = 300.0;
 
         function renderMinimap() {{
             miniCtx.clearRect(0, 0, 200, 200);
 
-            // 레이더 베이스 배경 원형
             miniCtx.save();
             miniCtx.beginPath();
             miniCtx.arc(100, 100, 96, 0, Math.PI * 2);
@@ -830,7 +773,6 @@ with tab_game:
             miniCtx.fill();
             miniCtx.clip();
 
-            // 거리 가이드 원
             miniCtx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
             miniCtx.lineWidth = 1;
             miniCtx.beginPath();
@@ -840,20 +782,17 @@ with tab_game:
             miniCtx.arc(100, 100, 94, 0, Math.PI * 2);
             miniCtx.stroke();
 
-            // 십자선 가이드
             miniCtx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
             miniCtx.beginPath();
             miniCtx.moveTo(100, 5); miniCtx.lineTo(100, 195);
             miniCtx.moveTo(5, 100); miniCtx.lineTo(195, 100);
             miniCtx.stroke();
 
-            // 골든 링 위치 렌더링 (노란색 점)
             rings.forEach(ring => {{
                 if (ring.visible) {{
                     const rx = 100 + (ring.position.x / WORLD_MAP_SIZE) * 170;
                     const rz = 100 + (ring.position.z / WORLD_MAP_SIZE) * 170;
 
-                    // 링 발광 효과
                     miniCtx.beginPath();
                     miniCtx.arc(rx, rz, 4.5, 0, Math.PI * 2);
                     miniCtx.fillStyle = '#facc15';
@@ -864,11 +803,9 @@ with tab_game:
                 }}
             }});
 
-            // 플레이어 마커 렌더링 (붉은 점 및 시선 방향)
             const px = 100 + (player.pos.x / WORLD_MAP_SIZE) * 170;
             const pz = 100 + (player.pos.z / WORLD_MAP_SIZE) * 170;
 
-            // 시선 방향 콘 표시
             miniCtx.save();
             miniCtx.translate(px, pz);
             miniCtx.rotate(-yaw);
@@ -1013,6 +950,7 @@ with tab_game:
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
+        // [개선 1 반영] 유효 거리(85m) 이내만 거미줄 발사 처리
         window.addEventListener('mouseup', (e) => {{
             if (!isDragging) return;
             isDragging = false;
@@ -1023,37 +961,52 @@ with tab_game:
                 mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
                 raycaster.setFromCamera(mouse, camera);
-                raycaster.far = WEB_RANGE;
+                raycaster.far = MAX_ATTACH_DISTANCE; // 최대 발사 가능 거리 제한
                 const hits = raycaster.intersectObjects(buildings);
 
                 if (hits.length > 0 && hits[0].point.y > 4) {{
-                    player.isWebZipping = true;
-                    player.zipTarget.copy(hits[0].point);
-                    webLine.visible = true;
-                    player.canDoubleJump = true;
+                    const hitPoint = hits[0].point;
+                    const directDist = player.pos.distanceTo(hitPoint);
+
+                    if (directDist >= MIN_ATTACH_DISTANCE && directDist <= MAX_ATTACH_DISTANCE) {{
+                        player.isWebZipping = true;
+                        player.zipTarget.copy(hitPoint);
+                        webLine.visible = true;
+                        player.canDoubleJump = true;
+                    }} else if (directDist > MAX_ATTACH_DISTANCE) {{
+                        triggerBanner("⚠️ 건물과의 거리가 너무 멉니다! (85m 이내 필요)", "#ef4444", 800);
+                    }}
                 }}
             }}
         }});
 
-        function resolveBuildingCollisions() {{
+        // [개선 3] 옥상 착지 시 순간이동 느낌을 없애는 스무스 감속 충돌 보정
+        function resolveBuildingCollisions(delta) {{
             const px = player.pos.x;
             const py = player.pos.y;
             const pz = player.pos.z;
 
             for (let b of buildingColliders) {{
                 if (px > b.minX && px < b.maxX && pz > b.minZ && pz < b.maxZ) {{
-                    if (py >= b.topY - 1.0 && player.vel.y <= 0) {{
-                        player.pos.y = b.topY;
-                        player.vel.y = 0;
-                        player.isGrounded = true;
-                        player.canDoubleJump = true;
-                        if (player.isWebZipping) {{
-                            player.isWebZipping = false;
-                            webLine.visible = false;
+                    // 옥상 상단에 진입했을 때 강제 점프 대신 스무스 보간(lerp) 적용
+                    if (py >= b.topY - 1.2 && player.vel.y <= 0) {{
+                        // 서서히 옥상 높이로 안착 (순간이동 느낌 제거)
+                        player.pos.y = THREE.MathUtils.lerp(player.pos.y, b.topY, Math.min(1.0, delta * 18.0));
+                        
+                        if (Math.abs(player.pos.y - b.topY) < 0.15) {{
+                            player.pos.y = b.topY;
+                            player.vel.y = 0;
+                            player.isGrounded = true;
+                            player.canDoubleJump = true;
+
+                            if (player.isWebZipping) {{
+                                player.isWebZipping = false;
+                                webLine.visible = false;
+                            }}
                         }}
                         return;
                     }} 
-                    else if (py < b.topY) {{
+                    else if (py < b.topY - 0.2) {{
                         const pushLeft = px - b.minX;
                         const pushRight = b.maxX - px;
                         const pushFront = pz - b.minZ;
@@ -1133,11 +1086,15 @@ with tab_game:
                     if (keys['KeyA']) player.vel.add(right.clone().multiplyScalar(-10));
                     if (keys['KeyD']) player.vel.add(right.clone().multiplyScalar(10));
 
-                    const pts = new Float32Array([
-                        player.pos.x, player.pos.y + 0.8, player.pos.z,
-                        player.zipTarget.x, player.zipTarget.y, player.zipTarget.z
-                    ]);
-                    webLine.geometry.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+                    // [개선 2 반영] 메모리 재할당 없이 기존 배열에만 값 주입하여 렉 제거
+                    const posArr = webPositionAttr.array;
+                    posArr[0] = player.pos.x;
+                    posArr[1] = player.pos.y + 0.8;
+                    posArr[2] = player.pos.z;
+                    posArr[3] = player.zipTarget.x;
+                    posArr[4] = player.zipTarget.y;
+                    posArr[5] = player.zipTarget.z;
+                    webPositionAttr.needsUpdate = true;
                 }}
             }} else {{
                 const controlPower = player.isGrounded ? 55.0 : 42.0;
@@ -1163,7 +1120,7 @@ with tab_game:
             }}
 
             player.pos.addScaledVector(player.vel, delta);
-            resolveBuildingCollisions();
+            resolveBuildingCollisions(delta);
 
             if (player.pos.y <= 0.6) {{
                 player.pos.y = 0.6;
@@ -1190,7 +1147,6 @@ with tab_game:
             );
             camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
 
-            // 골든 링 회전 및 부유 애니메이션 & 충돌 판정
             const time = clock.getElapsedTime();
             rings.forEach(ring => {{
                 ring.rotation.y += 0.035;
@@ -1230,7 +1186,7 @@ with tab_game:
             hudMomentum.innerHTML = `${{Math.round(currentMomentum)}} <span>kg·m/s</span>`;
 
             renderer.render(scene, camera);
-            renderMinimap(); // 미니맵 실시간 업데이트
+            renderMinimap();
         }}
 
         window.addEventListener('resize', () => {{
@@ -1247,7 +1203,7 @@ with tab_game:
 
     components.html(game_html, height=750, scrolling=False)
 
-# ==================== [TAB 3: 보스전 (빌런 진화 + 능력 업그레이드 시스템)] ====================
+# ==================== [TAB 3: 보스전 (빌런 진화 + 능력 업그레이드)] ====================
 with tab_boss:
     boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     boss_web_speed = float(st.session_state.web_speed)
