@@ -260,7 +260,7 @@ with tab_lab:
             st.session_state.web_thickness = selected_thickness
             st.success(f"생체역학 파라미터가 장착되었습니다! (탄성 견인 속도: {calculated_web_speed} km/h, 사정거리: {calculated_web_range} m)")
 
-# ==================== [TAB 1: 3D 시티 게임 (원거리 발사 + 렉/충돌 완벽 해결)] ====================
+# ==================== [TAB 1: 3D 시티 게임] ====================
 with tab_game:
     current_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     current_web_speed = float(st.session_state.web_speed)
@@ -563,7 +563,6 @@ with tab_game:
     <script>
         const WEB_COLOR = {current_web_color};
         const WEB_SPEED = {current_web_speed};
-        // [개선 1] 유효 사정거리 180m 이상으로 대폭 확장
         const MAX_ATTACH_DISTANCE = Math.max(180.0, {current_web_range});
         const WEB_THICKNESS = {current_web_thickness};
         const PLAYER_MASS = 65.0;
@@ -659,7 +658,7 @@ with tab_game:
             color: 0xfacc15, 
             emissive: 0xeab308, 
             emissiveIntensity: 0.8,
-            roughness: 0.2, 
+            rough: 0.2, 
             metalness: 0.8 
         }});
 
@@ -719,7 +718,6 @@ with tab_game:
         legs.position.y = 0.35;
         flipMeshGroup.add(legs);
 
-        // [개선 2] 거미줄 버퍼 정적 할당
         const webMat = new THREE.LineBasicMaterial({{ color: WEB_COLOR, linewidth: WEB_THICKNESS }});
         const webPositions = new Float32Array(6);
         const webGeo = new THREE.BufferGeometry();
@@ -928,7 +926,6 @@ with tab_game:
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // [개선 3: 거미줄 발사 전용 함수] 클릭 시 즉각적이고 정확하게 레이캐스팅 발사
         function triggerWebShot(clientX, clientY) {{
             if (!isSimRunning) return;
             const rect = renderer.domElement.getBoundingClientRect();
@@ -936,7 +933,7 @@ with tab_game:
             mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            raycaster.far = MAX_ATTACH_DISTANCE; // 최대 사정거리 180m
+            raycaster.far = MAX_ATTACH_DISTANCE;
             const hits = raycaster.intersectObjects(buildings, false);
 
             if (hits.length > 0) {{
@@ -953,14 +950,11 @@ with tab_game:
             }}
         }}
 
-        // 마우스 조작: 좌클릭 = 즉시 거미줄 발사, 우클릭 = 시야 회전 (드래그 충돌 제거)
         container.addEventListener('mousedown', (e) => {{
             container.focus();
             if (e.button === 0) {{
-                // 좌클릭: 즉시 거미줄 발사
                 triggerWebShot(e.clientX, e.clientY);
             }} else if (e.button === 2) {{
-                // 우클릭: 시야 회전 시작
                 isDraggingView = true;
                 startMouseX = e.clientX;
                 startMouseY = e.clientY;
@@ -968,7 +962,6 @@ with tab_game:
         }});
 
         window.addEventListener('mousemove', (e) => {{
-            // 좌클릭 누른 채 마우스 이동 시에도 계속 조준 지원
             if ((e.buttons & 1) === 1 && !isDraggingView) {{
                 triggerWebShot(e.clientX, e.clientY);
             }}
@@ -988,7 +981,6 @@ with tab_game:
 
         window.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // [개선 4] 옥상 착지 순간이동 느낌을 완전히 없앤 부드러운 안착 로직
         function resolveBuildingCollisions(delta) {{
             const px = player.pos.x;
             const py = player.pos.y;
@@ -996,7 +988,6 @@ with tab_game:
 
             for (let b of buildingColliders) {{
                 if (px > b.minX && px < b.maxX && pz > b.minZ && pz < b.maxZ) {{
-                    // 옥상 상단에 진입했을 때 강제 점프 없이 스무스하게 보간 안착
                     if (py >= b.topY - 1.5 && player.vel.y <= 0) {{
                         player.pos.y = THREE.MathUtils.lerp(player.pos.y, b.topY, Math.min(1.0, delta * 15.0));
                         
@@ -1093,7 +1084,6 @@ with tab_game:
                     if (keys['KeyA']) player.vel.add(right.clone().multiplyScalar(-10));
                     if (keys['KeyD']) player.vel.add(right.clone().multiplyScalar(10));
 
-                    // 메모리 재할당 없이 기존 배열에만 값 주입하여 렉 제거
                     const posArr = webPosAttr.array;
                     posArr[0] = player.pos.x;
                     posArr[1] = player.pos.y + 0.8;
@@ -1210,7 +1200,7 @@ with tab_game:
 
     components.html(game_html, height=750, scrolling=False)
 
-# ==================== [TAB 3: 보스전 (빌런 진화 + 능력 업그레이드)] ====================
+# ==================== [TAB 3: 보스전 (구조물 안착 & 낙하 데미지 완벽 적용)] ====================
 with tab_boss:
     boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     boss_web_speed = float(st.session_state.web_speed)
@@ -1515,9 +1505,9 @@ with tab_boss:
     </div>
 
     <div id="boss-guide">
-        • <span class="badge">좌클릭</span> 마우스 방향 정확 조준 발사 (포박 시 바닥 추락 & 기절!)<br>
-        • <span class="ult-badge">Q / 우클릭</span> 궁극기 [웹 블라섬] 발동 | <span class="badge">벽면 W</span> 수직 벽타기<br>
-        • 적 격파 시 <b>레벨업 & 상위 빌런(일렉트로, 베놈)</b> 순차 소환!
+        • <span class="badge">좌클릭</span> 마우스 조준 사격 | <span class="badge">Space</span> 도약 점프<br>
+        • <span class="ult-badge">Q / 우클릭</span> 궁극기 [웹 블라섬] 발동<br>
+        • ⚠️ 구조물 고소 낙하 시 <b>충격량에 비례하여 낙하 피해</b>를 입습니다!
     </div>
 
     <div id="boss-canvas" tabindex="0"></div>
@@ -1539,6 +1529,7 @@ with tab_boss:
         dirLight.position.set(50, 120, 60);
         scene.add(dirLight);
 
+        // 전투 아레나 바닥 (140x140)
         const arena = new THREE.Mesh(
             new THREE.BoxGeometry(140, 4, 140),
             new THREE.MeshStandardMaterial({{ color: 0x1e293b, roughness: 0.6 }})
@@ -1546,6 +1537,7 @@ with tab_boss:
         arena.position.y = -2;
         scene.add(arena);
 
+        // 보스전 엄폐/저격 타워 구조물 (4개)
         const climbBuildings = [];
         const towerGeo = new THREE.BoxGeometry(18, 55, 18);
         const towerMat = new THREE.MeshStandardMaterial({{ color: 0x334155, roughness: 0.4 }});
@@ -1557,10 +1549,12 @@ with tab_boss:
             const tower = new THREE.Mesh(towerGeo, towerMat);
             tower.position.set(pos[0], pos[1], pos[2]);
             scene.add(tower);
+            
+            // 수평 및 옥상 충돌 박스 등록
             climbBuildings.push({{
                 minX: pos[0] - 9.5, maxX: pos[0] + 9.5,
                 minZ: pos[2] - 9.5, maxZ: pos[2] + 9.5,
-                topY: 55
+                topY: 55.0
             }});
         }});
 
@@ -1590,7 +1584,6 @@ with tab_boss:
             speedMulti: 1.0,
             ultGauge: 0,
             isGrounded: true,
-            isWallClimbing: false,
             invulnerableTime: 2.0
         }};
 
@@ -1870,20 +1863,82 @@ with tab_boss:
             setTimeout(() => {{ hitOverlay.style.opacity = '0'; }}, 180);
         }}
 
-        function checkWallClimb() {{
-            player.isWallClimbing = false;
+        // [핵심 개선: 구조물 안착 & 벽면 밀림 & 낙하 피해 로직]
+        function resolveArenaCollisions(delta) {{
+            const px = player.pos.x;
+            const py = player.pos.y;
+            const pz = player.pos.z;
+
+            let standingOnTop = false;
+
             for (let t of climbBuildings) {{
-                const isNearX = (player.pos.x >= t.minX - 1.8 && player.pos.x <= t.maxX + 1.8);
-                const isNearZ = (player.pos.z >= t.minZ - 1.8 && player.pos.z <= t.maxZ + 1.8);
-                if (isNearX && isNearZ && player.pos.y < t.topY) {{
-                    if (keys['KeyW'] || keys['Space'] || keys['ArrowUp']) {{
-                        player.isWallClimbing = true;
-                        player.vel.y = 34.0;
-                        player.vel.x *= 0.3;
-                        player.vel.z *= 0.3;
+                // X-Z 평면 상에 타워 범위 안에 위치할 때
+                if (px > t.minX && px < t.maxX && pz > t.minZ && pz < t.maxZ) {{
+                    // 1. 옥상 상단에 접근하여 하강 중일 때 안정적으로 착지
+                    if (py >= t.topY - 1.8 && player.vel.y <= 0) {{
+                        // 착지 순간 고속 낙하 피해 검사 (초속 -28m/s 이상으로 추락 시)
+                        if (player.vel.y <= -28.0 && player.invulnerableTime <= 0) {{
+                            const fallDmg = Math.min(25, Math.round(Math.abs(player.vel.y) * 0.35));
+                            player.hp = Math.max(0, player.hp - fallDmg);
+                            playerHpBar.style.width = player.hp + '%';
+                            playerHpText.innerText = Math.round(player.hp) + '%';
+                            triggerPlayerHit();
+                            showBanner(`⚠️ 고소 불안정 착지 충격! (-${{fallDmg}} HP)`, "#ef4444");
+                            checkPlayerDeath();
+                        }}
+
+                        player.pos.y = t.topY;
+                        player.vel.y = 0;
+                        player.isGrounded = true;
+                        standingOnTop = true;
                         return;
                     }}
+                    // 2. 옥상 아래 옆면에 충돌했을 때: 내부 관통 방지 및 바깥으로 밀어내기
+                    else if (py < t.topY - 0.2) {{
+                        const pushLeft = px - t.minX;
+                        const pushRight = t.maxX - px;
+                        const pushFront = pz - t.minZ;
+                        const pushBack = t.maxZ - pz;
+                        const minOverlap = Math.min(pushLeft, pushRight, pushFront, pushBack);
+
+                        if (minOverlap === pushLeft) player.pos.x = t.minX;
+                        else if (minOverlap === pushRight) player.pos.x = t.maxX;
+                        else if (minOverlap === pushFront) player.pos.z = t.minZ;
+                        else if (minOverlap === pushBack) player.pos.z = t.maxZ;
+
+                        player.vel.x *= -0.1;
+                        player.vel.z *= -0.1;
+                    }}
                 }}
+            }}
+
+            // 3. 지면 바닥(y=0) 착지 처리 및 낙하 충격 검사
+            if (!standingOnTop && player.pos.y <= 0) {{
+                // 고층(옥상 등)에서 제동 없이 바닥으로 추락했을 때 피해
+                if (player.vel.y <= -28.0 && player.invulnerableTime <= 0) {{
+                    const fallDmg = Math.min(30, Math.round(Math.abs(player.vel.y) * 0.4));
+                    player.hp = Math.max(0, player.hp - fallDmg);
+                    playerHpBar.style.width = player.hp + '%';
+                    playerHpText.innerText = Math.round(player.hp) + '%';
+                    triggerPlayerHit();
+                    showBanner(`⚠️ 낙하 충격 피해 발생! (-${{fallDmg}} HP)`, "#ef4444");
+                    checkPlayerDeath();
+                }}
+
+                player.pos.y = 0;
+                player.vel.y = 0;
+                player.isGrounded = true;
+            }}
+        }}
+
+        function checkPlayerDeath() {{
+            if (player.hp <= 0 && !isGameOver) {{
+                isGameOver = true;
+                const cfg = STAGE_CONFIG[currentStage];
+                modalTitle.innerText = "💀 MISSION FAILED";
+                modalTitle.style.color = "#ef4444";
+                modalDesc.innerText = `${{cfg.name}}에게 쓰러졌거나 치명적인 낙하 충격을 받았습니다. 다시 도전하려면 클릭하세요!`;
+                modalScreen.style.display = 'flex';
             }}
         }}
 
@@ -1916,14 +1971,14 @@ with tab_boss:
                 player.vel.z += move.z * spd * delta;
             }}
 
-            checkWallClimb();
-
-            if (!player.isWallClimbing) player.vel.y -= 38.0 * delta;
+            // 중력 가속도 적용 (지속적인 하강)
+            player.vel.y -= 38.0 * delta;
 
             const damp = player.isGrounded ? 7.0 : 2.0;
             player.vel.x *= Math.max(0, 1 - damp * delta);
             player.vel.z *= Math.max(0, 1 - damp * delta);
 
+            // 점프 입력 (바닥 또는 옥상에 안착되어 있을 때만 도약)
             if (keys['Space'] && player.isGrounded) {{
                 player.vel.y = 22.0;
                 player.isGrounded = false;
@@ -1931,11 +1986,10 @@ with tab_boss:
 
             player.pos.addScaledVector(player.vel, delta);
 
-            if (player.pos.y <= 0) {{
-                player.pos.y = 0;
-                player.vel.y = 0;
-                player.isGrounded = true;
-            }}
+            // 타워 및 지면과의 충돌 / 착지 / 낙하 피해 처리
+            resolveArenaCollisions(delta);
+
+            // 아레나 외곽 이탈 방지
             player.pos.x = Math.max(-62, Math.min(62, player.pos.x));
             player.pos.z = Math.max(-62, Math.min(62, player.pos.z));
             playerGroup.position.copy(player.pos);
@@ -2040,14 +2094,7 @@ with tab_boss:
                         playerHpBar.style.width = player.hp + '%';
                         playerHpText.innerText = Math.round(player.hp) + '%';
                         triggerPlayerHit();
-
-                        if (player.hp <= 0) {{
-                            isGameOver = true;
-                            modalTitle.innerText = "💀 MISSION FAILED";
-                            modalTitle.style.color = "#ef4444";
-                            modalDesc.innerText = `${{cfg.name}}에게 쓰러졌습니다. 다시 도전하려면 클릭하세요!`;
-                            modalScreen.style.display = 'flex';
-                        }}
+                        checkPlayerDeath();
                     }}
                     scene.remove(pb.mesh);
                     bossProjectiles.splice(i, 1);
