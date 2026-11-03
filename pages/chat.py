@@ -8,10 +8,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 스파이더맨 무전기 전용 CSS (입력창 텍스트 및 대화창 시인성 개선)
+# 2. 스파이더맨 무전기 전용 CSS
 st.markdown("""
 <style>
-    /* 1. 전체 기본 텍스트 강제 밝은색 지정 */
+    /* 1. 기본 텍스트 색상 */
     .stApp, .stApp p, .stApp span, .stApp label, div[data-testid="stMarkdownContainer"] p {
         color: #f1f5f9 !important;
     }
@@ -95,7 +95,7 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     }
 
-    /* 대화창 내부 텍스트 밝은 흰색 고정 */
+    /* 대화창 내부 텍스트 밝은 흰색 */
     div[data-testid="stChatMessage"] div[data-testid="stMarkdownContainer"] p {
         color: #f8fafc !important;
         font-size: 15px !important;
@@ -117,10 +117,9 @@ st.markdown("""
         background: linear-gradient(270deg, rgba(56, 189, 248, 0.15), rgba(15, 23, 42, 0.92)) !important;
     }
 
-    /* 4. 하단 입력창(stChatInput) 타자 입력 및 글자 가독성 보장 */
+    /* 4. [핵심] 하단 입력창(stChatInput) 타자 칠 때 글자를 검정색으로 지정 */
     div[data-testid="stChatInput"] {
-        border-color: rgba(239, 68, 68, 0.6) !important;
-        background-color: #0f172a !important;
+        border-color: rgba(239, 68, 68, 0.8) !important;
     }
     
     div[data-testid="stChatInput"]:focus-within {
@@ -128,16 +127,17 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(239, 68, 68, 0.5) !important;
     }
 
-    /* 입력창 내부 텍스트 영역 */
+    /* 입력 텍스트 필드 글자색 검정 + 굵기 조정 */
     div[data-testid="stChatInput"] textarea {
-        color: #ffffff !important;
-        background-color: transparent !important;
-        font-size: 14px !important;
-        caret-color: #ef4444 !important;
+        color: #000000 !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        caret-color: #ef4444 !important; /* 커서는 스파이더맨 레드 */
     }
 
+    /* 플레이스홀더 안내 문구 색상 */
     div[data-testid="stChatInput"] textarea::placeholder {
-        color: #94a3b8 !important;
+        color: #475569 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -172,7 +172,7 @@ client = OpenAI(
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
 )
 
-# 6. 시스템 프롬프트 정의 (무전 통신 몰입감 강화)
+# 6. 시스템 프롬프트 정의
 SYSTEM_PROMPT = {
     "role": "system",
     "content": (
@@ -202,12 +202,10 @@ for msg in st.session_state.chat_messages:
 user_input = st.chat_input("피터에게 무전을 전송하세요... (Enter)")
 
 if user_input:
-    # 사용자 입력 표시 및 저장
     with st.chat_message("user", avatar="🧑"):
         st.markdown(user_input)
     st.session_state.chat_messages.append({"role": "user", "content": user_input})
 
-    # AI 응답 스트리밍 생성
     with st.chat_message("assistant", avatar="🕷️"):
         try:
             messages_payload = [SYSTEM_PROMPT] + st.session_state.chat_messages
