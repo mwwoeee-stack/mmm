@@ -1198,7 +1198,7 @@ with tab_game:
 
     components.html(game_html, height=750, scrolling=False)
 
-# ==================== [TAB 3: 보스전 (WASD 조작 복구 + 웹 견인 구조물 올라타기)] ====================
+# ==================== [TAB 3: 보스전 (WASD 조작 복구 + 웹 견인 + E 키 낙법/카메라 왜곡)] ====================
 with tab_boss:
     boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     boss_web_speed = float(st.session_state.web_speed)
@@ -1368,6 +1368,14 @@ with tab_boss:
             color: #38bdf8;
             font-weight: 700;
         }}
+        .roll-badge {{
+            background: rgba(234, 179, 8, 0.25);
+            border: 1px solid #facc15;
+            color: #fde047;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 900;
+        }}
         .ult-badge {{
             background: rgba(245, 158, 11, 0.3);
             border: 1px solid #f59e0b;
@@ -1508,7 +1516,7 @@ with tab_boss:
         • <span class="badge">좌클릭</span> 구조물/보스 조준 즉시 <b>거미줄 발사 & 웹 견인(Zip)</b><br>
         • <span class="badge">우클릭</span> 거미줄 타격탄 사격 | <span class="ult-badge">Q / 우클릭 길게</span> 궁극기 [웹 블라섬]<br>
         • <span class="badge">우클릭 드래그</span> 시야 회전 | <span class="badge">W,A,S,D</span> 무빙 | <span class="badge">Space</span> 점프<br>
-        • ⚠️ 구조물 고소 낙하 시 <b>바닥 충격에 의한 피해</b>가 발생하므로 웹스윙으로 안전 감속하세요!
+        • <span class="roll-badge">E 키</span> <b>낙법(Roll)</b>: 착지 직전 E를 누르면 <b>낙하 피해 완전 무효화 + 다이내믹 텀블링 전방 돌파!</b>
     </div>
 
     <div id="boss-canvas" tabindex="0"></div>
@@ -1519,7 +1527,8 @@ with tab_boss:
         scene.background = new THREE.Color(0x060814);
         scene.fog = new THREE.FogExp2(0x060814, 0.007);
 
-        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 900);
+        const BASE_FOV = 70;
+        const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / window.innerHeight, 0.1, 900);
         const renderer = new THREE.WebGLRenderer({{ antialias: true }});
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1553,7 +1562,6 @@ with tab_boss:
             scene.add(tower);
             towerMeshes.push(tower);
             
-            // 수평 및 옥상 충돌 경계 박스
             towerColliders.push({{
                 minX: pos[0] - 9.0, maxX: pos[0] + 9.0,
                 minZ: pos[2] - 9.0, maxZ: pos[2] + 9.0,
@@ -1564,17 +1572,20 @@ with tab_boss:
         const playerGroup = new THREE.Group();
         scene.add(playerGroup);
 
+        const playerTumbleGroup = new THREE.Group();
+        playerGroup.add(playerTumbleGroup);
+
         const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), new THREE.MeshStandardMaterial({{ color: 0xdc2626 }}));
         torso.position.y = 0.9;
-        playerGroup.add(torso);
+        playerTumbleGroup.add(torso);
 
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({{ color: 0xdc2626 }}));
         head.position.y = 1.75;
-        playerGroup.add(head);
+        playerTumbleGroup.add(head);
 
         const legs = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.45), new THREE.MeshStandardMaterial({{ color: 0x2563eb }}));
         legs.position.y = 0.35;
-        playerGroup.add(legs);
+        playerTumbleGroup.add(legs);
 
         // 3D 웹슈터 견인 시각선 (Line)
         const webMat = new THREE.LineBasicMaterial({{ color: {boss_web_color}, linewidth: {boss_web_thickness} }});
@@ -1600,7 +1611,25 @@ with tab_boss:
             isGrounded: true,
             isWebZipping: false,
             zipTarget: new THREE.Vector3(),
-            invulnerableTime: 2.0
+            invulnerableTime: 2.0,
+            // 낙법(Roll) 상태 시스템
+            rollBufferTimer: 0.0,
+            isRolling: false
+        }};
+
+        // 낙법 카메라 & 모션 제어 객체
+        const rollState = {{
+            active: false,
+            duration: 0.65,
+            timer: 0.0,
+            baseCameraHeight: 3.0,
+            minCameraHeight: 1.1,
+            baseCamDist: 7.5,
+            minCamDist: 5.5,
+            forwardImpulse: 24.0,
+            forwardDir: new THREE.Vector3(),
+            currentCamHeight: 3.0,
+            currentCamDist: 7.5
         }};
 
         let currentStage = 1;
@@ -1692,7 +1721,6 @@ with tab_boss:
         let isRightDragging = false;
         let startX = 0, startY = 0;
 
-        // 키 상태 맵 (WASD 조작 안전 보장)
         const activeKeys = {{}};
 
         const modalScreen = document.getElementById('modal-screen');
@@ -1762,6 +1790,10 @@ with tab_boss:
             player.isWebZipping = false;
             zipLine.visible = false;
             player.invulnerableTime = 2.0;
+            player.rollBufferTimer = 0.0;
+            player.isRolling = false;
+            rollState.active = false;
+            playerTumbleGroup.rotation.x = 0;
 
             webBullets.forEach(b => scene.remove(b.mesh));
             bossProjectiles.forEach(b => scene.remove(b.mesh));
@@ -1807,7 +1839,6 @@ with tab_boss:
             container.focus();
         }};
 
-        // [WASD 키보드 입력 정규화 등록]
         function updateKeyState(code, key, isPressed) {{
             const k = (code || key || '').toLowerCase();
             if (k.includes('keyw') || k === 'w' || k.includes('arrowup')) activeKeys['w'] = isPressed;
@@ -1817,15 +1848,36 @@ with tab_boss:
             if (k.includes('space') || k === ' ') activeKeys['space'] = isPressed;
         }}
 
+        // 낙법 실행 함수
+        function triggerSafeLandingRoll() {{
+            player.isRolling = true;
+            rollState.active = true;
+            rollState.timer = 0.0;
+
+            const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
+            rollState.forwardDir.copy(forward);
+
+            // 전방으로 관성 돌파 가속 부여
+            player.vel.x = rollState.forwardDir.x * rollState.forwardImpulse;
+            player.vel.z = rollState.forwardDir.z * rollState.forwardImpulse;
+            player.vel.y = 2.0;
+
+            showBanner("🌀 PERFECT ROLL! 안전 낙법 성공 (피해 0)!", "#facc15");
+        }}
+
         window.addEventListener('keydown', (e) => {{
             updateKeyState(e.code, e.key, true);
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
             if (e.code === 'KeyQ') fireUltimate();
             
+            // E 키: 낙법 입력 버퍼 활성화 (0.3초 유예)
+            if (e.code === 'KeyE') {{
+                player.rollBufferTimer = 0.35;
+            }}
+
             // 점프 입력
             if (e.code === 'Space') {{
                 if (player.isWebZipping) {{
-                    // 거미줄 끊고 도약 가속
                     player.isWebZipping = false;
                     zipLine.visible = false;
                     player.vel.y = Math.max(player.vel.y, 22.0);
@@ -1843,7 +1895,6 @@ with tab_boss:
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // [3D 웹슈터 견인(Web-Zip) 함수: 클릭 위치 구조물/옥상으로 고속 이동]
         function fireWebZip(clientX, clientY) {{
             if (!isStarted || isGameOver || isUpgrading) return;
             const rect = renderer.domElement.getBoundingClientRect();
@@ -1853,7 +1904,6 @@ with tab_boss:
             raycaster.setFromCamera(mouse, camera);
             raycaster.far = Math.max(180.0, {boss_web_range});
 
-            // 1. 구조물(타워) 충돌 검사
             const hits = raycaster.intersectObjects(towerMeshes, false);
             if (hits.length > 0) {{
                 const hitPoint = hits[0].point;
@@ -1864,24 +1914,20 @@ with tab_boss:
                 return;
             }}
 
-            // 2. 만약 보스를 클릭했다면 거미줄 탄환 즉시 발사
             const bossHits = raycaster.intersectObject(bossGroup, true);
             if (bossHits.length > 0) {{
                 shootWebBullet();
                 return;
             }}
 
-            // 3. 허공 클릭 시 해당 방향으로 탄환 발사
             shootWebBullet();
         }}
 
         container.addEventListener('mousedown', (e) => {{
             container.focus();
             if (e.button === 0) {{
-                // 좌클릭: 구조물로 거미줄 발사 & 웹 견인
                 fireWebZip(e.clientX, e.clientY);
             }} else if (e.button === 2) {{
-                // 우클릭: 시야 회전 시작 & 거미줄 타격탄 사격
                 shootWebBullet();
                 isRightDragging = true;
                 startX = e.clientX;
@@ -1950,7 +1996,7 @@ with tab_boss:
             setTimeout(() => {{ hitOverlay.style.opacity = '0'; }}, 180);
         }}
 
-        // [완벽한 구조물 관통 방지 & 옥상 안착 & 낙하 데미지 물리 엔진]
+        // [구조물 충돌 & 지면 착지 & E 낙법 판정 엔진]
         function resolveBossArenaCollisions(delta) {{
             const px = player.pos.x;
             const py = player.pos.y;
@@ -1959,11 +2005,14 @@ with tab_boss:
             let standingOnRooftop = false;
 
             for (let t of towerColliders) {{
-                // X, Z 경계 범위 내에 들어왔을 때
                 if (px >= t.minX - 0.7 && px <= t.maxX + 0.7 && pz >= t.minZ - 0.7 && pz <= t.maxZ + 0.7) {{
-                    
-                    // 1. 옥상 위 착지 (높이 55 이상에서 하강 시)
                     if (py >= t.topY - 1.8 && player.vel.y <= 0) {{
+                        // 옥상 착지
+                        if (player.vel.y <= -26.0) {{
+                            if (player.rollBufferTimer > 0) {{
+                                triggerSafeLandingRoll();
+                            }}
+                        }}
                         player.pos.y = t.topY;
                         player.vel.y = 0;
                         player.isGrounded = true;
@@ -1975,7 +2024,6 @@ with tab_boss:
                         }}
                         return;
                     }}
-                    // 2. 구조물 옆면 충돌: 내부 관통 절대 불가 (AABB 밀어내기)
                     else if (py < t.topY - 0.2) {{
                         const dLeft = Math.abs(px - (t.minX - 0.7));
                         const dRight = Math.abs((t.maxX + 0.7) - px);
@@ -1991,23 +2039,30 @@ with tab_boss:
                         if (player.isWebZipping) {{
                             player.isWebZipping = false;
                             zipLine.visible = false;
-                            player.vel.y = Math.max(player.vel.y, 16.0); // 벽에 닿았을 때 가볍게 위로 튕김
+                            player.vel.y = Math.max(player.vel.y, 16.0);
                         }}
                     }}
                 }}
             }}
 
-            // 3. 지면 바닥(y=0) 착지 및 낙하 충격 피해 검사
+            // 지면 바닥(y=0) 착지 시 낙법 체크 및 데미지 계산
             if (!standingOnRooftop && player.pos.y <= 0) {{
-                // 옥상에서 추락하여 초속 -28m/s 이상으로 낙하했을 때
-                if (player.vel.y <= -28.0 && player.invulnerableTime <= 0) {{
-                    const fallDmg = Math.min(30, Math.round(Math.abs(player.vel.y) * 0.4));
-                    player.hp = Math.max(0, player.hp - fallDmg);
-                    playerHpBar.style.width = player.hp + '%';
-                    playerHpText.innerText = Math.round(player.hp) + '%';
-                    triggerPlayerHit();
-                    showBanner(`⚠️ 낙하 충격 피해 발생! (-${{fallDmg}} HP)`, "#ef4444");
-                    checkPlayerDeath();
+                const fallVelocity = player.vel.y;
+
+                if (fallVelocity <= -26.0 && player.invulnerableTime <= 0) {{
+                    // 착지 타이밍에 E 입력 버퍼가 활성화되어 있으면 낙법 성공
+                    if (player.rollBufferTimer > 0) {{
+                        triggerSafeLandingRoll();
+                    }} else {{{{
+                        // 낙법 실패: 낙하 데미지 적용
+                        const fallDmg = Math.min(40, Math.round(Math.abs(fallVelocity) * 0.45));
+                        player.hp = Math.max(0, player.hp - fallDmg);
+                        playerHpBar.style.width = player.hp + '%';
+                        playerHpText.innerText = Math.round(player.hp) + '%';
+                        triggerPlayerHit();
+                        showBanner(`⚠️ 낙하 충격 피해 발생! (-${{fallDmg}} HP) [착지 전 E로 낙법!]`, "#ef4444");
+                        checkPlayerDeath();
+                    }}}}
                 }}
 
                 player.pos.y = 0;
@@ -2031,6 +2086,53 @@ with tab_boss:
             }}
         }}
 
+        // [낙법 시 카메라 높이 다운 + 순간 FOV 왜곡 + 메쉬 360도 텀블링 연출]
+        function updateRollMotion(delta) {{
+            if (player.rollBufferTimer > 0) {{
+                player.rollBufferTimer -= delta;
+            }}
+
+            if (!rollState.active) {{
+                // 기본 카메라 높이 및 거리, 기본 FOV로 부드럽게 복구
+                rollState.currentCamHeight = THREE.MathUtils.lerp(rollState.currentCamHeight, rollState.baseCameraHeight, delta * 8.0);
+                rollState.currentCamDist = THREE.MathUtils.lerp(rollState.currentCamDist, rollState.baseCamDist, delta * 8.0);
+                
+                camera.fov = THREE.MathUtils.lerp(camera.fov, BASE_FOV, delta * 8.0);
+                camera.updateProjectionMatrix();
+
+                playerTumbleGroup.rotation.x = 0;
+                return;
+            }}
+
+            rollState.timer += delta;
+            const progress = Math.min(rollState.timer / rollState.duration, 1.0);
+
+            // 1. 카메라 높이 및 거리 감쇠 (Sin 곡선으로 낮아졌다가 상승)
+            const heightDip = Math.sin(progress * Math.PI) * (rollState.baseCameraHeight - rollState.minCameraHeight);
+            rollState.currentCamHeight = rollState.baseCameraHeight - heightDip;
+
+            const distDip = Math.sin(progress * Math.PI) * (rollState.baseCamDist - rollState.minCamDist);
+            rollState.currentCamDist = rollState.baseCamDist - distDip;
+
+            // 2. 순간 FOV 왜곡 (착지 롤링 순간 왜곡감을 줘서 속도감 극대화)
+            camera.fov = BASE_FOV + Math.sin(progress * Math.PI) * 16.0;
+            camera.updateProjectionMatrix();
+
+            // 3. 3인칭 스파이더맨 모델 전방 360도 회전(Tumbling Roll)
+            playerTumbleGroup.rotation.x = progress * Math.PI * 2;
+
+            // 4. 전방 추진 감속
+            player.vel.x *= 0.97;
+            player.vel.z *= 0.97;
+
+            // 5. 종료 복구
+            if (progress >= 1.0) {{
+                rollState.active = false;
+                player.isRolling = false;
+                playerTumbleGroup.rotation.x = 0;
+            }}
+        }}
+
         const clock = new THREE.Clock();
 
         function battleLoop() {{
@@ -2047,14 +2149,14 @@ with tab_boss:
             const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
             const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
 
-            // WASD 수평 이동 조타
+            // WASD 수평 이동
             const move = new THREE.Vector3();
             if (activeKeys['w']) move.add(forward);
             if (activeKeys['s']) move.sub(forward);
             if (activeKeys['d']) move.add(right);
             if (activeKeys['a']) move.sub(right);
 
-            if (move.lengthSq() > 0) {{
+            if (move.lengthSq() > 0 && !player.isRolling) {{
                 move.normalize();
                 const spd = 95.0 * player.speedMulti;
                 player.vel.x += move.x * spd * delta;
@@ -2069,13 +2171,12 @@ with tab_boss:
                 if (dist < 4.0) {{
                     player.isWebZipping = false;
                     zipLine.visible = false;
-                    player.vel.y = Math.max(player.vel.y, 20.0); // 목표 도달 시 가볍게 위로 안착 도약
+                    player.vel.y = Math.max(player.vel.y, 20.0);
                 }} else {{
                     const pullDir = toTarget.normalize();
                     const targetSpeed = Math.min(dist * 3.5, {boss_web_speed} * 0.55);
                     player.vel.lerp(pullDir.multiplyScalar(targetSpeed), delta * 6.0);
 
-                    // 웹 라인 정적 버퍼 업데이트
                     const arr = webPosAttr.array;
                     arr[0] = player.pos.x;
                     arr[1] = player.pos.y + 0.8;
@@ -2086,23 +2187,30 @@ with tab_boss:
                     webPosAttr.needsUpdate = true;
                 }}
             }} else {{
-                // 일반 중력 및 지면 감속
                 player.vel.y -= 38.0 * delta;
                 const damp = player.isGrounded ? 7.0 : 2.0;
                 player.vel.x *= Math.max(0, 1 - damp * delta);
                 player.vel.z *= Math.max(0, 1 - damp * delta);
             }}
 
+            // 낙법 카메라 & 메쉬 회전 업데이트
+            updateRollMotion(delta);
+
             // 속도 적용
             player.pos.addScaledVector(player.vel, delta);
 
-            // 구조물 및 지면 충돌 검사 (관통 차단 & 옥상 착지)
+            // 충돌 검사 & 바닥 착지 처리
             resolveBossArenaCollisions(delta);
 
             // 아레나 외곽 이탈 방지
             player.pos.x = Math.max(-62, Math.min(62, player.pos.x));
             player.pos.z = Math.max(-62, Math.min(62, player.pos.z));
             playerGroup.position.copy(player.pos);
+
+            // 이동 방향으로 메쉬 회전
+            if (player.vel.lengthSq() > 1.0 && !player.isRolling) {{
+                playerGroup.rotation.y = Math.atan2(player.vel.x, player.vel.z);
+            }}
 
             // 보스 기동 및 공격
             const cfg = STAGE_CONFIG[currentStage];
@@ -2143,7 +2251,7 @@ with tab_boss:
                 }}
             }}
 
-            // 플레이어 투사체 이동 및 충돌
+            // 플레이어 투사체
             for (let i = webBullets.length - 1; i >= 0; i--) {{
                 const b = webBullets[i];
                 b.mesh.position.addScaledVector(b.vel, delta);
@@ -2194,7 +2302,7 @@ with tab_boss:
                 }}
             }}
 
-            // 보스 투사체 이동 및 충돌
+            // 보스 투사체
             for (let i = bossProjectiles.length - 1; i >= 0; i--) {{
                 const pb = bossProjectiles[i];
                 pb.mesh.position.addScaledVector(pb.vel, delta);
@@ -2220,15 +2328,15 @@ with tab_boss:
                 }}
             }}
 
-            // 3인칭 카메라 추적
-            const camDist = 7.5;
-            const camH = 3.0;
+            // 3인칭 카메라 (낙법 시 동적으로 변화하는 높이와 거리 적용)
+            const camDist = rollState.currentCamDist;
+            const camH = rollState.currentCamHeight;
             camera.position.set(
                 player.pos.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
                 player.pos.y + Math.sin(pitch) * camDist + camH,
                 player.pos.z + Math.cos(yaw) * Math.cos(pitch) * camDist
             );
-            camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
+            camera.lookAt(player.pos.x, player.pos.y + (rollState.active ? 0.6 : 1.2), player.pos.z);
 
             renderer.render(scene, camera);
         }}
