@@ -8,18 +8,17 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. 스파이더맨 무전기 전용 사이버네틱 HUD 스타일 CSS
+# 2. 스파이더맨 무전기 전용 CSS (입력창 텍스트 및 대화창 시인성 개선)
 st.markdown("""
 <style>
-    /* 전체 배경 톤 다운 */
-    .stApp {
-        background-color: #0b0f19;
-        color: #f8fafc;
+    /* 1. 전체 기본 텍스트 강제 밝은색 지정 */
+    .stApp, .stApp p, .stApp span, .stApp label, div[data-testid="stMarkdownContainer"] p {
+        color: #f1f5f9 !important;
     }
 
-    /* 상단 무전기 하드웨어 프레임 */
+    /* 2. 상단 무전기 하드웨어 프레임 */
     .radio-hud-container {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85));
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
         border: 2px solid #ef4444;
         border-radius: 16px;
         padding: 18px 24px;
@@ -40,7 +39,7 @@ st.markdown("""
     .radio-title-text {
         font-size: 20px;
         font-weight: 900;
-        color: #ef4444;
+        color: #ef4444 !important;
         letter-spacing: 1.5px;
         display: flex;
         align-items: center;
@@ -51,7 +50,7 @@ st.markdown("""
     .freq-badge {
         background: rgba(56, 189, 248, 0.15);
         border: 1px solid #38bdf8;
-        color: #38bdf8;
+        color: #38bdf8 !important;
         font-family: monospace;
         padding: 4px 12px;
         border-radius: 6px;
@@ -80,40 +79,65 @@ st.markdown("""
         display: flex;
         justify-content: space-between;
         font-size: 12px;
-        color: #94a3b8;
+        color: #94a3b8 !important;
+    }
+    .status-row b, .status-row span {
+        color: #cbd5e1 !important;
     }
 
-    /* Streamlit 채팅 말풍선 커스텀 */
+    /* 3. 대화 말풍선 공통 스타일 및 본문 글자 선명화 */
     div[data-testid="stChatMessage"] {
-        background-color: rgba(15, 23, 42, 0.75) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(15, 23, 42, 0.85) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
         border-radius: 14px !important;
         margin-bottom: 14px !important;
         padding: 14px 18px !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     }
 
+    /* 대화창 내부 텍스트 밝은 흰색 고정 */
+    div[data-testid="stChatMessage"] div[data-testid="stMarkdownContainer"] p {
+        color: #f8fafc !important;
+        font-size: 15px !important;
+        line-height: 1.6 !important;
+        font-weight: 400 !important;
+    }
+
     /* 피터 파커(Assistant) 말풍선 */
     div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarIcon-assistant"]),
     div[data-testid="stChatMessage"]:has(span:contains("🕷️")) {
         border-left: 4px solid #ef4444 !important;
-        background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(15, 23, 42, 0.85)) !important;
+        background: linear-gradient(90deg, rgba(239, 68, 68, 0.15), rgba(15, 23, 42, 0.92)) !important;
     }
 
     /* 사용자(User) 말풍선 */
     div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarIcon-user"]),
     div[data-testid="stChatMessage"]:has(span:contains("🧑")) {
         border-right: 4px solid #38bdf8 !important;
-        background: linear-gradient(270deg, rgba(56, 189, 248, 0.08), rgba(15, 23, 42, 0.85)) !important;
+        background: linear-gradient(270deg, rgba(56, 189, 248, 0.15), rgba(15, 23, 42, 0.92)) !important;
     }
 
-    /* 입력창(stChatInput) 스타일링 */
+    /* 4. 하단 입력창(stChatInput) 타자 입력 및 글자 가독성 보장 */
     div[data-testid="stChatInput"] {
-        border-color: rgba(239, 68, 68, 0.5) !important;
+        border-color: rgba(239, 68, 68, 0.6) !important;
+        background-color: #0f172a !important;
     }
+    
     div[data-testid="stChatInput"]:focus-within {
         border-color: #ef4444 !important;
-        box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5) !important;
+    }
+
+    /* 입력창 내부 텍스트 영역 */
+    div[data-testid="stChatInput"] textarea {
+        color: #ffffff !important;
+        background-color: transparent !important;
+        font-size: 14px !important;
+        caret-color: #ef4444 !important;
+    }
+
+    div[data-testid="stChatInput"] textarea::placeholder {
+        color: #94a3b8 !important;
     }
 </style>
 """, unsafe_allow_html=True)
