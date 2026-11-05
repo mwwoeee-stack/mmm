@@ -723,6 +723,7 @@ with tab_game:
         legs.position.y = 0.35;
         flipMeshGroup.add(legs);
 
+        #고분자 로프 인장 견인 모델: 목표 지점 벡터 정규화 후 거리 비례 가속, 도달 시 잔여 속도를 수직 점프로 전환
         const webMat = new THREE.LineBasicMaterial({{ color: WEB_COLOR, linewidth: WEB_THICKNESS }});
         const webPositions = new Float32Array(6);
         const webGeo = new THREE.BufferGeometry();
