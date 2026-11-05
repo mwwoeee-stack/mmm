@@ -921,7 +921,6 @@ with tab_game:
 
         window.addEventListener('keyup', (e) => {{ keys[e.code] = false; }});
 
-        // 탭/창 전환 및 포커스 아웃 시 입력 고정 방지
         window.addEventListener('blur', () => {{
             isDraggingView = false;
             for (let k in keys) keys[k] = false;
@@ -1052,7 +1051,6 @@ with tab_game:
         const hudMomentum = document.getElementById('hud-momentum');
         const ringScore = document.getElementById('ring-score');
 
-        // 백그라운드 탭 전환 시 루프 절전 처리
         document.addEventListener('visibilitychange', () => {{
             if (document.hidden) {{
                 clock.stop();
@@ -1215,7 +1213,7 @@ with tab_game:
 
     components.html(game_html, height=750, scrolling=False)
 
-# ==================== [TAB 3: 보스전 (구조 개선 & 문법 오류 완전 수정)] ====================
+# ==================== [TAB 3: 보스전] ====================
 with tab_boss:
     boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     boss_web_speed = float(st.session_state.web_speed)
@@ -1907,7 +1905,6 @@ with tab_boss:
             updateKeyState(e.code, e.key, false);
         }});
 
-        // 포커스 아웃 시 조작 키 및 드래그 플래그 완전 초기화
         window.addEventListener('blur', () => {{
             isRightDragging = false;
             for (let k in activeKeys) activeKeys[k] = false;
@@ -2017,7 +2014,6 @@ with tab_boss:
             setTimeout(() => {{ hitOverlay.style.opacity = '0'; }}, 180);
         }}
 
-        // [구조물 충돌 & 지면 착지 & E 낙법 판정 엔진]
         function resolveBossArenaCollisions(delta) {{
             const px = player.pos.x;
             const py = player.pos.y;
@@ -2065,7 +2061,6 @@ with tab_boss:
                 }}
             }}
 
-            // 지면 바닥(y=0) 착지 시 낙법 체크 및 데미지 계산
             if (!standingOnRooftop && player.pos.y <= 0) {{
                 const fallVelocity = player.vel.y;
 
@@ -2104,40 +2099,63 @@ with tab_boss:
             }}
         }}
 
-        // [낙법 시 카메라 높이 다운 + 순간 FOV 왜곡 + 메쉬 360도 텀블링 연출]
+        /**
+         * [기능 정의: 착지 낙법 시 동적 시각 왜곡 및 관성 제어 엔진]
+         * 
+         * 1. 수학적 감쇠 모델:
+         *    - Sin 반주기 곡선(0 -> pi)을 활용해 착지 순간 카메라 높이 및 거리를 부드럽게 압축 후 복귀.
+         *    - heightDip / distDip: z-축 및 y-축 카메라 급변으로 인한 화면 흔들림 방지.
+         * 
+         * 2. 광학 및 시각 동역학 연출:
+         *    - Dynamic FOV: 착지 시야각을 기본(70도)에서 최대 +16도 순간 확장하여 충격 완화 및 가속감 구현.
+         *    - Tumbling Roll: 플레이어 그룹 메쉬를 전방 x축 기준으로 정확히 1회전(2*pi) 회전 처리.
+         * 
+         * 3. 물리적 관성 보정:
+         *    - 낙하 수직 충격량을 전방 수평 벡터로 분산시킨 뒤, 0.97 마찰 감쇠율을 곱해 자연스러운 제동 구현.
+         */
         function updateRollMotion(delta) {{
+            // [입력 버퍼 카운트다운]: 착지 직전 E 키 입력 유예 시간(0.35s)을 델타 타임 단위로 차감
             if (player.rollBufferTimer > 0) {{
                 player.rollBufferTimer -= delta;
             }}
 
+            // [상태 1: 일반 상태 복구 단계]
             if (!rollState.active) {{
+                // 선형 보간(Lerp)을 통해 조준 시야 거리, 높이, FOV를 기본 설정값으로 원복
                 rollState.currentCamHeight = THREE.MathUtils.lerp(rollState.currentCamHeight, rollState.baseCameraHeight, delta * 8.0);
                 rollState.currentCamDist = THREE.MathUtils.lerp(rollState.currentCamDist, rollState.baseCamDist, delta * 8.0);
                 
                 camera.fov = THREE.MathUtils.lerp(camera.fov, BASE_FOV, delta * 8.0);
                 camera.updateProjectionMatrix();
 
+                // 텀블링 회전각 0도 고정
                 playerTumbleGroup.rotation.x = 0;
                 return;
             }}
 
+            // [상태 2: 액티브 텀블링 낙법 진행 단계]
             rollState.timer += delta;
             const progress = Math.min(rollState.timer / rollState.duration, 1.0);
 
+            // 1. 카메라 높이 및 줌 거리 다이내믹 디핑 (낮아졌다가 솟구치는 궤적)
             const heightDip = Math.sin(progress * Math.PI) * (rollState.baseCameraHeight - rollState.minCameraHeight);
             rollState.currentCamHeight = rollState.baseCameraHeight - heightDip;
 
             const distDip = Math.sin(progress * Math.PI) * (rollState.baseCamDist - rollState.minCamDist);
             rollState.currentCamDist = rollState.baseCamDist - distDip;
 
+            // 2. 광각 카메라 화각(FOV) 왜곡 적용
             camera.fov = BASE_FOV + Math.sin(progress * Math.PI) * 16.0;
             camera.updateProjectionMatrix();
 
+            // 3. 스파이더맨 3인칭 모델 전방 360도 텀블링
             playerTumbleGroup.rotation.x = progress * Math.PI * 2;
 
+            // 4. 전방 추진 관성 마찰 감쇠
             player.vel.x *= 0.97;
             player.vel.z *= 0.97;
 
+            // 5. 모션 사이클 완료 판정 및 플래그 초기화
             if (progress >= 1.0) {{
                 rollState.active = false;
                 player.isRolling = false;
@@ -2147,7 +2165,6 @@ with tab_boss:
 
         const clock = new THREE.Clock();
 
-        // 탭 백그라운드 전환 시 절전 처리
         document.addEventListener('visibilitychange', () => {{
             if (document.hidden) {{
                 clock.stop();
