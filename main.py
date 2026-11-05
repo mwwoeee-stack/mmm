@@ -206,7 +206,7 @@ with tab_lab:
             "노즐 압축 챔버 압력 ΔP (MPa)",
             min_value=8.0,
             max_value=35.0,
-            value=float(st.session_state.slider_delta_p),
+            value=float(st.session_state.slider_delta_p), # 역학 실험실 -> 3D 시뮬레이터 데이터 파이프라인: 계산된 속도/사거리/색상을 실시간 게임 엔진 인스턴스로 전달
             step=1.0,
             key="slider_delta_p",
             help="웹슈터 노즐 내부의 유체 분사 압력입니다. 높을수록 거미줄의 '유효 사정거리'가 대폭 길어집니다."
