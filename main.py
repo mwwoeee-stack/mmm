@@ -65,7 +65,7 @@ st.markdown("""
         border: none !important;
         display: block !important;
     }
-
+# 세션 캐시 초기화: 탭 전환 및 위젯 상호작용 간 고분자 가교 밀도, 사출압, 궤적 색상/굵기 데이터 보존
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
