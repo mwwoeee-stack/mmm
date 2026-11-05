@@ -393,6 +393,7 @@ with tab_game:
             background: rgba(255,255,255,0.2);
             padding: 1px 5px;
             border-radius: 4px;
+            #AABB 충돌체(buildingColliders) 교차 검증을 통해 빌딩 내부 배치를 방지하고 옥상/공중 항로 좌표를 보장하는 스폰 로직
             font-weight: 700;
             color: #38bdf8;
         }}
