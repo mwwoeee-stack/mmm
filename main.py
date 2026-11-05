@@ -1212,7 +1212,7 @@ with tab_game:
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        }});
+        }}); #광학/동역학 연출 엔진: Sin 반주기 커브 기반 카메라 줌 압축(Dipping), 광각 왜곡(FOV +16°), 캐릭터 360° 전방 회전 제어
 
         animate();
     </script>
