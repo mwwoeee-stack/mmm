@@ -546,7 +546,7 @@ with tab_game:
     <div id="stunt-alert">✨ ACROBATIC FLIP! ✨</div>
 
     <div id="controls-guide">
-        • <span class="key-badge">좌클릭</span> 마우스 위치 건물로 즉시 웹 견인 (사정거리 180m)<br>
+        • <span class="key-badge">좌클릭</span> 마우스 위치 건물로 즉시 웹 견인 (사정거리 {current_web_range}m)<br>
         • <span class="key-badge">우클릭 드래그</span> 시야 회전 | <span class="key-badge">W,A,S,D</span> 방향 조타<br>
         • <span class="key-badge">Space</span> 점프 / 줄 끊고 날아가기 | <span class="key-badge">더블 Space</span> <b>공중제비 점프</b>
     </div>
@@ -561,7 +561,7 @@ with tab_game:
     <script>
         const WEB_COLOR = {current_web_color};
         const WEB_SPEED = {current_web_speed};
-        const MAX_ATTACH_DISTANCE = Math.max(180.0, {current_web_range});
+        const MAX_ATTACH_DISTANCE = {current_web_range};
         const WEB_THICKNESS = {current_web_thickness};
         const PLAYER_MASS = 65.0;
         const IMPACT_DT = 0.05;
@@ -921,6 +921,12 @@ with tab_game:
 
         window.addEventListener('keyup', (e) => {{ keys[e.code] = false; }});
 
+        // 탭/창 전환 및 포커스 아웃 시 입력 고정 방지
+        window.addEventListener('blur', () => {{
+            isDraggingView = false;
+            for (let k in keys) keys[k] = false;
+        }});
+
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -1046,8 +1052,19 @@ with tab_game:
         const hudMomentum = document.getElementById('hud-momentum');
         const ringScore = document.getElementById('ring-score');
 
+        // 백그라운드 탭 전환 시 루프 절전 처리
+        document.addEventListener('visibilitychange', () => {{
+            if (document.hidden) {{
+                clock.stop();
+            }} else {{
+                clock.start();
+            }}
+        }});
+
         function animate() {{
             requestAnimationFrame(animate);
+            if (document.hidden) return;
+
             const delta = Math.min(clock.getDelta(), 0.05);
 
             if (!isSimRunning) {{
@@ -1198,7 +1215,7 @@ with tab_game:
 
     components.html(game_html, height=750, scrolling=False)
 
-# ==================== [TAB 3: 보스전 (WASD 조작 복구 + 웹 견인 + E 키 낙법/카메라 왜곡)] ====================
+# ==================== [TAB 3: 보스전 (구조 개선 & 문법 오류 완전 수정)] ====================
 with tab_boss:
     boss_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
     boss_web_speed = float(st.session_state.web_speed)
@@ -1612,7 +1629,6 @@ with tab_boss:
             isWebZipping: false,
             zipTarget: new THREE.Vector3(),
             invulnerableTime: 2.0,
-            // 낙법(Roll) 상태 시스템
             rollBufferTimer: 0.0,
             isRolling: false
         }};
@@ -1795,6 +1811,9 @@ with tab_boss:
             rollState.active = false;
             playerTumbleGroup.rotation.x = 0;
 
+            camera.fov = BASE_FOV;
+            camera.updateProjectionMatrix();
+
             webBullets.forEach(b => scene.remove(b.mesh));
             bossProjectiles.forEach(b => scene.remove(b.mesh));
             webBullets.length = 0;
@@ -1848,7 +1867,6 @@ with tab_boss:
             if (k.includes('space') || k === ' ') activeKeys['space'] = isPressed;
         }}
 
-        // 낙법 실행 함수
         function triggerSafeLandingRoll() {{
             player.isRolling = true;
             rollState.active = true;
@@ -1857,7 +1875,6 @@ with tab_boss:
             const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
             rollState.forwardDir.copy(forward);
 
-            // 전방으로 관성 돌파 가속 부여
             player.vel.x = rollState.forwardDir.x * rollState.forwardImpulse;
             player.vel.z = rollState.forwardDir.z * rollState.forwardImpulse;
             player.vel.y = 2.0;
@@ -1870,12 +1887,10 @@ with tab_boss:
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
             if (e.code === 'KeyQ') fireUltimate();
             
-            // E 키: 낙법 입력 버퍼 활성화 (0.3초 유예)
             if (e.code === 'KeyE') {{
                 player.rollBufferTimer = 0.35;
             }}
 
-            // 점프 입력
             if (e.code === 'Space') {{
                 if (player.isWebZipping) {{
                     player.isWebZipping = false;
@@ -1892,6 +1907,12 @@ with tab_boss:
             updateKeyState(e.code, e.key, false);
         }});
 
+        // 포커스 아웃 시 조작 키 및 드래그 플래그 완전 초기화
+        window.addEventListener('blur', () => {{
+            isRightDragging = false;
+            for (let k in activeKeys) activeKeys[k] = false;
+        }});
+
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -1902,7 +1923,7 @@ with tab_boss:
             mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            raycaster.far = Math.max(180.0, {boss_web_range});
+            raycaster.far = {boss_web_range};
 
             const hits = raycaster.intersectObjects(towerMeshes, false);
             if (hits.length > 0) {{
@@ -2007,7 +2028,6 @@ with tab_boss:
             for (let t of towerColliders) {{
                 if (px >= t.minX - 0.7 && px <= t.maxX + 0.7 && pz >= t.minZ - 0.7 && pz <= t.maxZ + 0.7) {{
                     if (py >= t.topY - 1.8 && player.vel.y <= 0) {{
-                        // 옥상 착지
                         if (player.vel.y <= -26.0) {{
                             if (player.rollBufferTimer > 0) {{
                                 triggerSafeLandingRoll();
@@ -2050,11 +2070,9 @@ with tab_boss:
                 const fallVelocity = player.vel.y;
 
                 if (fallVelocity <= -26.0 && player.invulnerableTime <= 0) {{
-                    // 착지 타이밍에 E 입력 버퍼가 활성화되어 있으면 낙법 성공
                     if (player.rollBufferTimer > 0) {{
                         triggerSafeLandingRoll();
-                    }} else {{{{
-                        // 낙법 실패: 낙하 데미지 적용
+                    }} else {{
                         const fallDmg = Math.min(40, Math.round(Math.abs(fallVelocity) * 0.45));
                         player.hp = Math.max(0, player.hp - fallDmg);
                         playerHpBar.style.width = player.hp + '%';
@@ -2062,7 +2080,7 @@ with tab_boss:
                         triggerPlayerHit();
                         showBanner(`⚠️ 낙하 충격 피해 발생! (-${{fallDmg}} HP) [착지 전 E로 낙법!]`, "#ef4444");
                         checkPlayerDeath();
-                    }}}}
+                    }}
                 }}
 
                 player.pos.y = 0;
@@ -2093,7 +2111,6 @@ with tab_boss:
             }}
 
             if (!rollState.active) {{
-                // 기본 카메라 높이 및 거리, 기본 FOV로 부드럽게 복구
                 rollState.currentCamHeight = THREE.MathUtils.lerp(rollState.currentCamHeight, rollState.baseCameraHeight, delta * 8.0);
                 rollState.currentCamDist = THREE.MathUtils.lerp(rollState.currentCamDist, rollState.baseCamDist, delta * 8.0);
                 
@@ -2107,25 +2124,20 @@ with tab_boss:
             rollState.timer += delta;
             const progress = Math.min(rollState.timer / rollState.duration, 1.0);
 
-            // 1. 카메라 높이 및 거리 감쇠 (Sin 곡선으로 낮아졌다가 상승)
             const heightDip = Math.sin(progress * Math.PI) * (rollState.baseCameraHeight - rollState.minCameraHeight);
             rollState.currentCamHeight = rollState.baseCameraHeight - heightDip;
 
             const distDip = Math.sin(progress * Math.PI) * (rollState.baseCamDist - rollState.minCamDist);
             rollState.currentCamDist = rollState.baseCamDist - distDip;
 
-            // 2. 순간 FOV 왜곡 (착지 롤링 순간 왜곡감을 줘서 속도감 극대화)
             camera.fov = BASE_FOV + Math.sin(progress * Math.PI) * 16.0;
             camera.updateProjectionMatrix();
 
-            // 3. 3인칭 스파이더맨 모델 전방 360도 회전(Tumbling Roll)
             playerTumbleGroup.rotation.x = progress * Math.PI * 2;
 
-            // 4. 전방 추진 감속
             player.vel.x *= 0.97;
             player.vel.z *= 0.97;
 
-            // 5. 종료 복구
             if (progress >= 1.0) {{
                 rollState.active = false;
                 player.isRolling = false;
@@ -2135,8 +2147,19 @@ with tab_boss:
 
         const clock = new THREE.Clock();
 
+        // 탭 백그라운드 전환 시 절전 처리
+        document.addEventListener('visibilitychange', () => {{
+            if (document.hidden) {{
+                clock.stop();
+            }} else {{
+                clock.start();
+            }}
+        }});
+
         function battleLoop() {{
             requestAnimationFrame(battleLoop);
+            if (document.hidden) return;
+
             const delta = Math.min(clock.getDelta(), 0.05);
 
             if (!isStarted || isGameOver || isUpgrading) {{
@@ -2149,7 +2172,6 @@ with tab_boss:
             const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).normalize();
             const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).normalize();
 
-            // WASD 수평 이동
             const move = new THREE.Vector3();
             if (activeKeys['w']) move.add(forward);
             if (activeKeys['s']) move.sub(forward);
@@ -2163,7 +2185,6 @@ with tab_boss:
                 player.vel.z += move.z * spd * delta;
             }}
 
-            // 1. 웹 견인(Zip) 이동 물리
             if (player.isWebZipping) {{
                 const toTarget = new THREE.Vector3().subVectors(player.zipTarget, player.pos);
                 const dist = toTarget.length();
@@ -2193,26 +2214,19 @@ with tab_boss:
                 player.vel.z *= Math.max(0, 1 - damp * delta);
             }}
 
-            // 낙법 카메라 & 메쉬 회전 업데이트
             updateRollMotion(delta);
 
-            // 속도 적용
             player.pos.addScaledVector(player.vel, delta);
-
-            // 충돌 검사 & 바닥 착지 처리
             resolveBossArenaCollisions(delta);
 
-            // 아레나 외곽 이탈 방지
             player.pos.x = Math.max(-62, Math.min(62, player.pos.x));
             player.pos.z = Math.max(-62, Math.min(62, player.pos.z));
             playerGroup.position.copy(player.pos);
 
-            // 이동 방향으로 메쉬 회전
             if (player.vel.lengthSq() > 1.0 && !player.isRolling) {{
                 playerGroup.rotation.y = Math.atan2(player.vel.x, player.vel.z);
             }}
 
-            // 보스 기동 및 공격
             const cfg = STAGE_CONFIG[currentStage];
             if (boss.stunTimer > 0) {{
                 boss.stunTimer -= delta;
@@ -2251,7 +2265,6 @@ with tab_boss:
                 }}
             }}
 
-            // 플레이어 투사체
             for (let i = webBullets.length - 1; i >= 0; i--) {{
                 const b = webBullets[i];
                 b.mesh.position.addScaledVector(b.vel, delta);
@@ -2302,7 +2315,6 @@ with tab_boss:
                 }}
             }}
 
-            // 보스 투사체
             for (let i = bossProjectiles.length - 1; i >= 0; i--) {{
                 const pb = bossProjectiles[i];
                 pb.mesh.position.addScaledVector(pb.vel, delta);
@@ -2328,7 +2340,6 @@ with tab_boss:
                 }}
             }}
 
-            // 3인칭 카메라 (낙법 시 동적으로 변화하는 높이와 거리 적용)
             const camDist = rollState.currentCamDist;
             const camH = rollState.currentCamHeight;
             camera.position.set(
