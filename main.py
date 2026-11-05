@@ -90,6 +90,7 @@ if "web_thickness" not in st.session_state:
 
 if "slider_matrix" not in st.session_state:
     st.session_state.slider_matrix = "재조합 스파이드로인 단백질 (Spidroin I/II Mimic)"
+# 생체모사 공학 프리셋 딕셔너리: 탄성률(속도)과 토출압(사거리)의 트레이드오프를 상황별(스피드/저격/포박/표준)로 사전 정의
 if "slider_rho_x" not in st.session_state:
     st.session_state.slider_rho_x = 6.5
 if "slider_delta_p" not in st.session_state:
