@@ -637,6 +637,7 @@ with tab_game:
                 const posZ = z * SPACING + (Math.random()-0.5)*8;
 
                 const bldg = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bldgMat);
+                #3축 AABB 충돌 처리 및 운동량 변화량(|m*Δv|) 산출: 벽면 충돌 시 충격량(Impulse) 및 평균 충격력(F_avg = I/Δt) 자동 로깅
                 bldg.position.set(posX, h/2, posZ);
                 scene.add(bldg);
                 buildings.push(bldg);
