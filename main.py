@@ -586,7 +586,7 @@ with tab_game:
                 this.maxKineticEnergy = 0.0;
             }}
         }};
-
+#마우스 좌표의 NDC 변환(-1~1) 및 Raycaster를 이용한 빌딩 표면 타깃팅 (허용 사정거리 MAX_ATTACH_DISTANCE 이내 검증)
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a1128);
