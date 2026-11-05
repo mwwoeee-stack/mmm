@@ -1043,7 +1043,7 @@ with tab_game:
 
                         const impulse = PLAYER_MASS * deltaV;
                         const impactForce = impulse / IMPACT_DT;
-
+                        #낙법(Parkour Roll) 물리 메커니즘: 수직 낙하 벡터를 전방 충격량(forwardImpulse 24.0)으로 전환하여 낙하 대미지 0 처리
                         if (impulse > physicsLogger.maxImpulse) {{
                             physicsLogger.maxImpulse = impulse;
                             physicsLogger.maxForce = impactForce;
