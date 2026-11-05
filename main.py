@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 import math
 
 # 1. 스트림릿 와이드 모드 설정
+# Streamlit 고유 iframe 및 탭 레이아웃 최적화: 헤더 제거 및 stTabs z-index를 최상위(99999)로 설정해 마우스 이벤트 간섭 방지
 st.set_page_config(
     page_title="Spider-Man Biomechanics Lab & Boss Battle Evolution",
     page_icon="🕷️",
