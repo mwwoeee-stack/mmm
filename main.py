@@ -1358,6 +1358,7 @@ with tab_boss:
             transform: translateX(-50%) scale(0.85);
             font-size: 26px;
             font-weight: 900;
+            #보스 3D 궤적 기동 및 패턴 AI: 삼각함수 기반 부유 기동과 플레이어 방향 벡터 기반 유도 투사체 사출
             letter-spacing: 2px;
             opacity: 0;
             pointer-events: none;
