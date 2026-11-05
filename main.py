@@ -185,6 +185,7 @@ with tab_lab:
         fluid_base = st.selectbox(
             "기반 생체 복합 폴리머 기질 (Polymer Matrix)",
             matrix_options,
+            # [물리 역학 코어 2]: 베르누이 유체 동역학 기반 노즐 분사 속도(v0) 산출 및 유효 사정거리(100~260 m) 보정
             index=curr_idx,
             key="slider_matrix"
         )
