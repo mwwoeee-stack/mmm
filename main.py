@@ -1158,6 +1158,7 @@ with tab_game:
 
             const camDist = 6.8;
             const camH = 2.6;
+            #고소 낙하 종단속도(-26 m/s) 판정: 입력 버퍼 유효 시 안전 낙법 발동, 실패 시 운동에너지 비례 낙하 대미지 부여
             camera.position.set(
                 player.pos.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
                 player.pos.y + Math.sin(pitch) * camDist + camH,
