@@ -59,7 +59,7 @@ st.markdown("""
         position: relative !important;
         z-index: 1 !important;
         margin-top: 4px !important;
-    }
+    } # 인터랙티브 3단 뷰 구조 정의: 1) 도시 비행 시뮬레이터, 2) 생체재료 역학 실험실, 3) 계층형 보스 전투 아레나
 
     iframe {
         border: none !important;
