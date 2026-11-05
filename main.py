@@ -486,6 +486,7 @@ with tab_game:
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     </head>
     <body>
+    #2D 캔버스 기반 시티 레이더: 월드 좌표계를 정규화(170/300)하여 플레이어 방향(Yaw) 및 골든 링 위치를 실시간 트래킹
 
     <div id="hit-vignette"></div>
 
