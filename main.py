@@ -181,6 +181,7 @@ with tab_lab:
         ]
         curr_idx = matrix_options.index(st.session_state.slider_matrix) if st.session_state.slider_matrix in matrix_options else 0
 
+        # [물리 역학 코어 1]: Affine Network 고무 탄성 모델 기반 영률 계산(GPa) 및 기준 계수 대비 비행 추진 속도(80~160 km/h) 클램핑
         fluid_base = st.selectbox(
             "기반 생체 복합 폴리머 기질 (Polymer Matrix)",
             matrix_options,
