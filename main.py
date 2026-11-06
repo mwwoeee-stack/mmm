@@ -600,7 +600,7 @@ with tab_game:
         container.appendChild(renderer.domElement);
 
         scene.add(new THREE.HemisphereLight(0xff7744, 0x111122, 0.7));
-        const dirLight = new THREE.DirectionalLight(0xffaa44, 1.2);
+        const dirLight = new THREE.DirectionalLight(0xffaa44, 1.2); #Raycasting Web Shoot: 마우스 화면 좌표를 3D 공간으로 역투영하여 도심 구조물과의 접점 좌표 연산
         dirLight.position.set(100, 150, 70);
         scene.add(dirLight);
 
