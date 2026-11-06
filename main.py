@@ -446,7 +446,7 @@ with tab_game:
             z-index: 100;
             transition: opacity 0.3s ease;
         }}
-        
+        #Three.js Scene Setup: 도심 3D 뷰어 캔버스 컨테이너 마운트 및 원경 안개(FogExp2) 효과 초기화
         #report-modal {{
             background: rgba(15, 23, 42, 0.95);
             border: 2px solid #38bdf8;
