@@ -971,7 +971,7 @@ with tab_game:
                 startMouseX = e.clientX;
                 startMouseY = e.clientY;
             }}
-        }});
+        }}); #Stage State Machine: 각 스테이지별 빌런(그린 고블린/일렉트로/베놈) 외형 스케일 및 패턴 파라미터 전환
 
         window.addEventListener('mousemove', (e) => {{
             if ((e.buttons & 1) === 1 && !isDraggingView) {{
