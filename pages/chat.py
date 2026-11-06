@@ -117,7 +117,7 @@ st.markdown("""
         background: linear-gradient(270deg, rgba(56, 189, 248, 0.15), rgba(15, 23, 42, 0.92)) !important;
     }
 
-    /* 4. [핵심] 하단 입력창(stChatInput) 타자 칠 때 글자를 검정색으로 지정 */
+    /* 4. 하단 입력창 스타일 */
     div[data-testid="stChatInput"] {
         border-color: rgba(239, 68, 68, 0.8) !important;
     }
@@ -127,17 +127,22 @@ st.markdown("""
         box-shadow: 0 0 15px rgba(239, 68, 68, 0.5) !important;
     }
 
-    /* 입력 텍스트 필드 글자색 검정 + 굵기 조정 */
     div[data-testid="stChatInput"] textarea {
         color: #000000 !important;
         font-size: 15px !important;
         font-weight: 600 !important;
-        caret-color: #ef4444 !important; /* 커서는 스파이더맨 레드 */
+        caret-color: #ef4444 !important;
     }
 
-    /* 플레이스홀더 안내 문구 색상 */
     div[data-testid="stChatInput"] textarea::placeholder {
         color: #475569 !important;
+    }
+
+    /* 스피너 로딩 텍스트 스타일 */
+    div[data-testid="stAlert"] {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -198,24 +203,29 @@ for msg in st.session_state.chat_messages:
     with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(msg["content"])
 
-# 9. 사용자 입력 및 스트리밍 처리
+# 9. 사용자 입력 및 스트리밍 처리 (로딩 애니메이션 추가)
 user_input = st.chat_input("피터에게 무전을 전송하세요... (Enter)")
 
 if user_input:
+    # 1) 사용자 메시지 출력 및 저장
     with st.chat_message("user", avatar="🧑"):
         st.markdown(user_input)
     st.session_state.chat_messages.append({"role": "user", "content": user_input})
 
+    # 2) 피터 파커 응답 생성 및 스트리밍
     with st.chat_message("assistant", avatar="🕷️"):
         try:
             messages_payload = [SYSTEM_PROMPT] + st.session_state.chat_messages
 
-            stream = client.chat.completions.create(
-                model="gemini-3.5-flash-lite",
-                messages=messages_payload,
-                stream=True
-            )
+            # 통신 대기 스피너와 빈 출력 공간(placeholder) 생성
+            with st.spinner("📻 피터가 무전 신호를 수신하고 있어요... 치-익..."):
+                stream = client.chat.completions.create(
+                    model="gemini-3.5-flash-lite",
+                    messages=messages_payload,
+                    stream=True
+                )
 
+            # 토큰 단위로 스트리밍 타이핑 출력
             response_text = st.write_stream(stream)
             st.session_state.chat_messages.append({"role": "assistant", "content": response_text})
 
