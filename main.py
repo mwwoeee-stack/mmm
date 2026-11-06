@@ -715,7 +715,7 @@ with tab_game:
         const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), new THREE.MeshStandardMaterial({{ color: 0xdc2626 }}));
         torso.position.y = 0.9;
         flipMeshGroup.add(torso);
-
+#Main Simulation Loop: 델타 타임 기반 플레이어 관성 이동, 3D 카메라 트래킹 및 미니맵 실시간 동기화
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({{ color: 0xdc2626 }}));
         head.position.y = 1.75;
         flipMeshGroup.add(head);
