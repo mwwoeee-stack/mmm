@@ -456,6 +456,7 @@ with tab_game:
             box-shadow: 0 10px 40px rgba(56, 189, 248, 0.3);
             text-align: center;
         }}
+        #Procedural Texture: 2D 캔버스를 활용해 야간 빌딩의 무작위 창문 조명 맵을 동적으로 생성
         .report-grid {{
             display: grid;
             grid-template-columns: repeat(2, 1fr);
