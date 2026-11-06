@@ -263,7 +263,7 @@ with tab_lab:
             st.session_state.web_range = calculated_web_range
             st.session_state.web_thickness = selected_thickness
             st.success(f"생체역학 파라미터가 장착되었습니다! (탄성 견인 속도: {calculated_web_speed} km/h, 사정거리: {calculated_web_range} m)")
-
+# Physics Calculation: 기체 상수 및 절대온도(298.15K) 기반 나노 네트워크 탄성 계수와 노즐 베르누이 유속 산출
 # ==================== [TAB 1: 3D 시티 게임] ====================
 with tab_game:
     current_web_color = int(st.session_state.web_color.replace("#", "0x"), 16)
