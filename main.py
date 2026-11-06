@@ -1183,7 +1183,7 @@ with tab_game:
 
                     if (ringCount >= 10) {{
                         triggerBanner("🎉 MISSION COMPLETE! 모든 골든 링 수집 완료! 🎉", "#38bdf8", 1800);
-                        setTimeout(() => {{
+                        setTimeout(() => {{ #Boss Battle Engine: 웹 투사체 충돌 판정, 보스 AI 유도 탄환 사출 및 낙법 연출 상태 머신 갱신
                             openReport(true);
                         }}, 1000);
                     }} else {{
