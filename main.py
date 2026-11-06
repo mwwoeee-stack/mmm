@@ -59,13 +59,13 @@ st.markdown("""
         position: relative !important;
         z-index: 1 !important;
         margin-top: 4px !important;
-    } # 인터랙티브 3단 뷰 구조 정의: 1) 도시 비행 시뮬레이터, 2) 생체재료 역학 실험실, 3) 계층형 보스 전투 아레나
+    } /* 인터랙티브 3단 뷰 구조 정의: 1) 도시 비행 시뮬레이터, 2) 생체재료 역학 실험실, 3) 계층형 보스 전투 아레나 */
 
     iframe {
         border: none !important;
         display: block !important;
     }
-# 세션 캐시 초기화: 탭 전환 및 위젯 상호작용 간 고분자 가교 밀도, 사출압, 궤적 색상/굵기 데이터 보존
+    /* 세션 캐시 초기화: 탭 전환 및 위젯 상호작용 간 고분자 가교 밀도, 사출압, 궤적 색상/굵기 데이터 보존 */
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
@@ -169,7 +169,7 @@ with tab_lab:
 
     st.markdown("<br>", unsafe_allow_html=True)
     col_ctrl, col_physics = st.columns([1.1, 1.2])
-# Preset Configuration: 상황별 최적 탄성률과 유효 사거리 밸런스를 정의한 프리셋 데이터셋 딕셔너리
+    # Preset Configuration: 상황별 최적 탄성률과 유효 사거리 밸런스를 정의한 프리셋 데이터셋 딕셔너리
     with col_ctrl:
         st.subheader("⚙ 고분자 나노구조 및 사출 공학 제어")
 
@@ -393,7 +393,7 @@ with tab_game:
             background: rgba(255,255,255,0.2);
             padding: 1px 5px;
             border-radius: 4px;
-            #AABB 충돌체(buildingColliders) 교차 검증을 통해 빌딩 내부 배치를 방지하고 옥상/공중 항로 좌표를 보장하는 스폰 로직
+            /* AABB 충돌체(buildingColliders) 교차 검증을 통해 빌딩 내부 배치를 방지하고 옥상/공중 항로 좌표를 보장하는 스폰 로직 */
             font-weight: 700;
             color: #38bdf8;
         }}
@@ -446,7 +446,7 @@ with tab_game:
             z-index: 100;
             transition: opacity 0.3s ease;
         }}
-        #Three.js Scene Setup: 도심 3D 뷰어 캔버스 컨테이너 마운트 및 원경 안개(FogExp2) 효과 초기화
+        /* Three.js Scene Setup: 도심 3D 뷰어 캔버스 컨테이너 마운트 및 원경 안개(FogExp2) 효과 초기화 */
         #report-modal {{
             background: rgba(15, 23, 42, 0.95);
             border: 2px solid #38bdf8;
@@ -456,7 +456,7 @@ with tab_game:
             box-shadow: 0 10px 40px rgba(56, 189, 248, 0.3);
             text-align: center;
         }}
-        #Procedural Texture: 2D 캔버스를 활용해 야간 빌딩의 무작위 창문 조명 맵을 동적으로 생성
+        /* Procedural Texture: 2D 캔버스를 활용해 야간 빌딩의 무작위 창문 조명 맵을 동적으로 생성 */
         .report-grid {{
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -487,7 +487,7 @@ with tab_game:
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     </head>
     <body>
-    #2D 캔버스 기반 시티 레이더: 월드 좌표계를 정규화(170/300)하여 플레이어 방향(Yaw) 및 골든 링 위치를 실시간 트래킹
+    <!-- 2D 캔버스 기반 시티 레이더: 월드 좌표계를 정규화(170/300)하여 플레이어 방향(Yaw) 및 골든 링 위치를 실시간 트래킹 -->
 
     <div id="hit-vignette"></div>
 
@@ -587,7 +587,7 @@ with tab_game:
                 this.maxKineticEnergy = 0.0;
             }}
         }};
-#마우스 좌표의 NDC 변환(-1~1) 및 Raycaster를 이용한 빌딩 표면 타깃팅 (허용 사정거리 MAX_ATTACH_DISTANCE 이내 검증)
+        // 마우스 좌표의 NDC 변환(-1~1) 및 Raycaster를 이용한 빌딩 표면 타깃팅 (허용 사정거리 MAX_ATTACH_DISTANCE 이내 검증)
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a1128);
@@ -600,7 +600,7 @@ with tab_game:
         container.appendChild(renderer.domElement);
 
         scene.add(new THREE.HemisphereLight(0xff7744, 0x111122, 0.7));
-        const dirLight = new THREE.DirectionalLight(0xffaa44, 1.2); #Raycasting Web Shoot: 마우스 화면 좌표를 3D 공간으로 역투영하여 도심 구조물과의 접점 좌표 연산
+        const dirLight = new THREE.DirectionalLight(0xffaa44, 1.2); // Raycasting Web Shoot: 마우스 화면 좌표를 3D 공간으로 역투영하여 도심 구조물과의 접점 좌표 연산
         dirLight.position.set(100, 150, 70);
         scene.add(dirLight);
 
@@ -638,7 +638,7 @@ with tab_game:
                 const posZ = z * SPACING + (Math.random()-0.5)*8;
 
                 const bldg = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bldgMat);
-                #3축 AABB 충돌 처리 및 운동량 변화량(|m*Δv|) 산출: 벽면 충돌 시 충격량(Impulse) 및 평균 충격력(F_avg = I/Δt) 자동 로깅
+                // 3축 AABB 충돌 처리 및 운동량 변화량(|m*Δv|) 산출: 벽면 충돌 시 충격량(Impulse) 및 평균 충격력(F_avg = I/Δt) 자동 로깅
                 bldg.position.set(posX, h/2, posZ);
                 scene.add(bldg);
                 buildings.push(bldg);
@@ -715,7 +715,7 @@ with tab_game:
         const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.5), new THREE.MeshStandardMaterial({{ color: 0xdc2626 }}));
         torso.position.y = 0.9;
         flipMeshGroup.add(torso);
-#Main Simulation Loop: 델타 타임 기반 플레이어 관성 이동, 3D 카메라 트래킹 및 미니맵 실시간 동기화
+        // Main Simulation Loop: 델타 타임 기반 플레이어 관성 이동, 3D 카메라 트래킹 및 미니맵 실시간 동기화
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({{ color: 0xdc2626 }}));
         head.position.y = 1.75;
         flipMeshGroup.add(head);
@@ -724,7 +724,7 @@ with tab_game:
         legs.position.y = 0.35;
         flipMeshGroup.add(legs);
 
-        #고분자 로프 인장 견인 모델: 목표 지점 벡터 정규화 후 거리 비례 가속, 도달 시 잔여 속도를 수직 점프로 전환
+        // 고분자 로프 인장 견인 모델: 목표 지점 벡터 정규화 후 거리 비례 가속, 도달 시 잔여 속도를 수직 점프로 전환
         const webMat = new THREE.LineBasicMaterial({{ color: WEB_COLOR, linewidth: WEB_THICKNESS }});
         const webPositions = new Float32Array(6);
         const webGeo = new THREE.BufferGeometry();
@@ -971,7 +971,7 @@ with tab_game:
                 startMouseX = e.clientX;
                 startMouseY = e.clientY;
             }}
-        }}); #Stage State Machine: 각 스테이지별 빌런(그린 고블린/일렉트로/베놈) 외형 스케일 및 패턴 파라미터 전환
+        }}); // Stage State Machine: 각 스테이지별 빌런(그린 고블린/일렉트로/베놈) 외형 스케일 및 패턴 파라미터 전환
 
         window.addEventListener('mousemove', (e) => {{
             if ((e.buttons & 1) === 1 && !isDraggingView) {{
@@ -1044,7 +1044,7 @@ with tab_game:
 
                         const impulse = PLAYER_MASS * deltaV;
                         const impactForce = impulse / IMPACT_DT;
-                        #낙법(Parkour Roll) 물리 메커니즘: 수직 낙하 벡터를 전방 충격량(forwardImpulse 24.0)으로 전환하여 낙하 대미지 0 처리
+                        // 낙법(Parkour Roll) 물리 메커니즘: 수직 낙하 벡터를 전방 충격량(forwardImpulse 24.0)으로 전환하여 낙하 대미지 0 처리
                         if (impulse > physicsLogger.maxImpulse) {{
                             physicsLogger.maxImpulse = impulse;
                             physicsLogger.maxForce = impactForce;
@@ -1159,7 +1159,7 @@ with tab_game:
 
             const camDist = 6.8;
             const camH = 2.6;
-            #고소 낙하 종단속도(-26 m/s) 판정: 입력 버퍼 유효 시 안전 낙법 발동, 실패 시 운동에너지 비례 낙하 대미지 부여
+            // 고소 낙하 종단속도(-26 m/s) 판정: 입력 버퍼 유효 시 안전 낙법 발동, 실패 시 운동에너지 비례 낙하 대미지 부여
             camera.position.set(
                 player.pos.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
                 player.pos.y + Math.sin(pitch) * camDist + camH,
@@ -1183,7 +1183,7 @@ with tab_game:
 
                     if (ringCount >= 10) {{
                         triggerBanner("🎉 MISSION COMPLETE! 모든 골든 링 수집 완료! 🎉", "#38bdf8", 1800);
-                        setTimeout(() => {{ #Boss Battle Engine: 웹 투사체 충돌 판정, 보스 AI 유도 탄환 사출 및 낙법 연출 상태 머신 갱신
+                        setTimeout(() => {{ // Boss Battle Engine: 웹 투사체 충돌 판정, 보스 AI 유도 탄환 사출 및 낙법 연출 상태 머신 갱신
                             openReport(true);
                         }}, 1000);
                     }} else {{
@@ -1213,7 +1213,7 @@ with tab_game:
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        }}); #광학/동역학 연출 엔진: Sin 반주기 커브 기반 카메라 줌 압축(Dipping), 광각 왜곡(FOV +16°), 캐릭터 360° 전방 회전 제어
+        }}); // 광학/동역학 연출 엔진: Sin 반주기 커브 기반 카메라 줌 압축(Dipping), 광각 왜곡(FOV +16°), 캐릭터 360° 전방 회전 제어
 
         animate();
     </script>
@@ -1359,7 +1359,7 @@ with tab_boss:
             transform: translateX(-50%) scale(0.85);
             font-size: 26px;
             font-weight: 900;
-            #보스 3D 궤적 기동 및 패턴 AI: 삼각함수 기반 부유 기동과 플레이어 방향 벡터 기반 유도 투사체 사출
+            /* 보스 3D 궤적 기동 및 패턴 AI: 삼각함수 기반 부유 기동과 플레이어 방향 벡터 기반 유도 투사체 사출 */
             letter-spacing: 2px;
             opacity: 0;
             pointer-events: none;
