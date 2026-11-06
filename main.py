@@ -169,7 +169,7 @@ with tab_lab:
 
     st.markdown("<br>", unsafe_allow_html=True)
     col_ctrl, col_physics = st.columns([1.1, 1.2])
-
+# Preset Configuration: 상황별 최적 탄성률과 유효 사거리 밸런스를 정의한 프리셋 데이터셋 딕셔너리
     with col_ctrl:
         st.subheader("⚙ 고분자 나노구조 및 사출 공학 제어")
 
